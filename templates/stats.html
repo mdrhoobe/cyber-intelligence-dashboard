@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}Statistics — CID{% endblock %}
+{% block breadcrumb %}Statistics{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Analytics</div>
+  <h1 class="page-title">Statistics</h1>
+  <p class="page-sub">Visual breakdown of all investigations and scan results.</p>
+</div>
+
+{% if not stats or stats.total == 0 %}
+
+<!-- Empty state -->
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-chart-bar"></i></div>
+    <div class="empty-title">No data yet</div>
+    <div class="empty-text">
+      Run a <a href="{{ url_for('username') }}">Username Scan</a>
+      or <a href="{{ url_for('domain') }}">Domain Analysis</a> to generate statistics.
+    </div>
+  </div>
+</div>
+
+{% else %}
+
+<!-- ── Top Stat Cards ─────────────────────────────── -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
+
+  <div class="stat-card c-cyan">
+    <div class="stat-lbl">Total Scans</div>
+    <div class="stat-val" id="sv-total">{{ stats.total }}</div>
+    <div class="stat-icon"><i class="fas fa-search"></i></div>
+  </div>
+
+  <div class="stat-card c-green">
+    <div class="stat-lbl">Username Found Rate</div>
+    <div class="stat-val" id="sv-rate">{{ stats.found_rate }}<span style="font-size:16px;font-weight:400;">%</span></div>
+    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+  </div>
+
+  <div class="stat-card c-violet">
+    <div class="stat-lbl">Domain Reachable</div>
+    <div class="stat-val">{{ stats.d_rate }}<span style="font-size:16px;font-weight:400;">%</span></div>
+    <div class="stat-icon"><i class="fas fa-globe"></i></div>
+  </div>
+
+  <div class="stat-card c-amber">
+    <div class="stat-lbl">Avg Response Time</div>
+    <div class="stat-val">{{ stats.avg_ms }}<span style="font-size:16px;font-weight:400;">ms</span></div>
+    <div class="stat-icon"><i class="fas fa-tachometer-alt"></i></div>
+  </div>
+
+</div>
+
+<!-- ── Activity Line Chart (full width) ─────────────── -->
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div class="card-label" style="margin-bottom:0;">
+      <i class="fas fa-chart-line" style="color:var(--cyan);"></i> &nbsp;Activity — Last 14 Days
+    </div>
+    <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);">
+      {{ stats.total }} total scans
+    </span>
+  </div>
+  <div style="position:relative;height:200px;">
+    <canvas id="chartActivity"></canvas>
+  </div>
+</div>
+
+<!-- ── Doughnut + Bar (two columns) ─────────────────── -->
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;margin-bottom:24px;">
+
+  <!-- Doughnut — scan type split -->
+  <div class="card">
+    <div class="card-label" style="margin-bottom:16px;">
+      <i class="fas fa-chart-pie" style="color:var(--violet);"></i> &nbsp;Scan Types
+    </div>
+    <div style="position:relative;height:200px;display:flex;align-items:center;justify-content:center;">
+      <canvas id="chartTypes"></canvas>
+    </div>
+    <!-- Centre label -->
+    <div style="text-align:center;margin-top:16px;display:flex;justify-content:center;gap:20px;">
+      <div style="text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--cyan);">{{ stats.uname_count }}</div>
+        <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;">Username</div>
+      </div>
+      <div style="width:1px;background:var(--border);"></div>
+      <div style="text-align:center;">
+        <div style="font-family:var(--font-mono);font-size:20px;font-weight:700;color:var(--violet);">{{ stats.domain_count }}</div>
+        <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;">Domain</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar — top platforms -->
+  <div class="card">
+    <div class="card-label" style="margin-bottom:16px;">
+      <i class="fas fa-chart-bar" style="color:var(--green);"></i> &nbsp;Top Platforms Found
+    </div>
+    {% if stats.top_names %}
+    <div style="position:relative;height:200px;">
+      <canvas id="chartPlatforms"></canvas>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding:40px 20px;">
+      <div class="empty-icon" style="font-size:30px;"><i class="fas fa-user-secret"></i></div>
+      <div class="empty-text">Run username scans to see platform data.</div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ── Domain Summary Row ────────────────────────────── -->
+{% if stats.domain_count > 0 %}
+<div class="card">
+  <div class="card-label">
+    <i class="fas fa-globe" style="color:var(--violet);"></i> &nbsp;Domain Scan Summary
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px;">
+
+    <div class="readout-item">
+      <div class="ri-label">Domains Analyzed</div>
+      <div class="ri-value" style="font-size:22px;">{{ stats.domain_count }}</div>
+    </div>
+
+    <div class="readout-item">
+      <div class="ri-label">Reachable</div>
+      <div class="ri-value ok" style="font-size:22px;">
+        {{ stats.d_reach }}
+        <span style="font-size:13px;color:var(--text-dim);">/ {{ stats.domain_count }}</span>
+      </div>
+    </div>
+
+    <div class="readout-item">
+      <div class="ri-label">SSL Certificates</div>
+      <div class="ri-value ok" style="font-size:22px;">
+        {{ stats.d_ssl }}
+        <span style="font-size:13px;color:var(--text-dim);">/ {{ stats.domain_count }}</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+
+{% block extra_js %}
+{% if stats and stats.total > 0 %}
+<script>
+/* ── Chart defaults ──────────────────────────────── */
+Chart.defaults.color          = '#4a6080';
+Chart.defaults.borderColor    = '#1a3050';
+Chart.defaults.font.family    = 'Inter';
+
+const CYAN   = '#00c8ff';
+const VIOLET = '#8b5cf6';
+const GREEN  = '#10b981';
+const AMBER  = '#f59e0b';
+
+/* ── 1. Activity line chart ──────────────────────── */
+new Chart(document.getElementById('chartActivity'), {
+  type: 'line',
+  data: {
+    labels: {{ stats.day_labels | tojson }},
+    datasets: [{
+      data:            {{ stats.day_counts | tojson }},
+      borderColor:     CYAN,
+      backgroundColor: 'rgba(0,200,255,0.07)',
+      tension:         0.4,
+      fill:            true,
+      pointBackgroundColor: CYAN,
+      pointRadius:     4,
+      pointHoverRadius: 6,
+      borderWidth:     2,
+    }]
+  },
+  options: {
+    responsive:          true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false },
+               tooltip: { callbacks: {
+                 label: ctx => ` ${ctx.parsed.y} scan${ctx.parsed.y !== 1 ? 's' : ''}`
+               }}},
+    scales: {
+      x: {
+        grid:  { color: '#1a3050' },
+        ticks: { color: '#4a6080', font: { family:'JetBrains Mono', size:10 } }
+      },
+      y: {
+        grid:      { color: '#1a3050' },
+        ticks:     { color: '#4a6080', font: { family:'JetBrains Mono', size:10 }, stepSize: 1 },
+        beginAtZero: true,
+      }
+    }
+  }
+});
+
+/* ── 2. Doughnut — scan types ────────────────────── */
+new Chart(document.getElementById('chartTypes'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Username', 'Domain'],
+    datasets: [{
+      data:            [{{ stats.uname_count }}, {{ stats.domain_count }}],
+      backgroundColor: ['rgba(0,200,255,0.65)', 'rgba(139,92,246,0.65)'],
+      borderColor:     [CYAN, VIOLET],
+      borderWidth:     1,
+      hoverOffset:     6,
+    }]
+  },
+  options: {
+    responsive:          true,
+    maintainAspectRatio: false,
+    cutout: '68%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color:'#c8d8e8', font:{ size:12 }, padding:16, usePointStyle:true }
+      }
+    }
+  }
+});
+
+/* ── 3. Bar — top platforms ──────────────────────── */
+{% if stats.top_names %}
+new Chart(document.getElementById('chartPlatforms'), {
+  type: 'bar',
+  data: {
+    labels: {{ stats.top_names | tojson }},
+    datasets: [{
+      label: 'Found',
+      data:            {{ stats.top_counts | tojson }},
+      backgroundColor: 'rgba(16,185,129,0.55)',
+      borderColor:     GREEN,
+      borderWidth:     1,
+      borderRadius:    5,
+      hoverBackgroundColor: 'rgba(16,185,129,0.8)',
+    }]
+  },
+  options: {
+    responsive:          true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: {
+        grid:  { display: false },
+        ticks: { color:'#4a6080', font:{ family:'JetBrains Mono', size:10 } }
+      },
+      y: {
+        grid:        { color:'#1a3050' },
+        ticks:       { color:'#4a6080', font:{ family:'JetBrains Mono', size:10 }, stepSize:1 },
+        beginAtZero: true,
+      }
+    }
+  }
+});
+{% endif %}
+
+/* ── Animate stat value counters ─────────────────── */
+document.querySelectorAll('[id^="sv-"]').forEach(el => {
+  const raw = parseFloat(el.textContent);
+  if (isNaN(raw) || raw === 0) return;
+  const span   = el.querySelector('span');
+  const suffix = span ? span.outerHTML : '';
+  let cur = 0;
+  const step = Math.ceil(raw / 25);
+  const t = setInterval(() => {
+    cur = Math.min(cur + step, raw);
+    el.innerHTML = cur + suffix;
+    if (cur >= raw) clearInterval(t);
+  }, 35);
+});
+</script>
+{% endif %}
+{% endblock %}

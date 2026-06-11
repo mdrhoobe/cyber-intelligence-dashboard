@@ -213,6 +213,80 @@ def reports():
     all_reports = list(reversed(load_reports()))
     return render_template('reports.html', reports=all_reports, active='reports')
 
+@app.route('/stats')
+def stats():
+    reports   = load_reports()
+    from collections import defaultdict
+    from datetime import datetime, timedelta
+
+    if not reports:
+        return render_template('stats.html', stats=None, active='stats')
+
+    # ── Scan type counts ──────────────────────────────
+    uname_count  = sum(1 for r in reports if r.get('type') == 'username')
+    domain_count = sum(1 for r in reports if r.get('type') == 'domain')
+
+    # ── Activity — last 14 days ───────────────────────
+    daily = defaultdict(int)
+    for r in reports:
+        try:
+            day = r['timestamp'].split(' ')[0]
+            daily[day] += 1
+        except Exception:
+            pass
+
+    day_labels, day_counts = [], []
+    for i in range(13, -1, -1):
+        d = datetime.now() - timedelta(days=i)
+        day_labels.append(d.strftime('%b %d'))
+        day_counts.append(daily.get(d.strftime('%Y-%m-%d'), 0))
+
+    # ── Platform found counts ─────────────────────────
+    plat_found = defaultdict(int)
+    for r in reports:
+        if r.get('type') == 'username' and r.get('results'):
+            for res in r['results']:
+                if res.get('status') == 'found':
+                    plat_found[res['platform']] += 1
+
+    top = sorted(plat_found.items(), key=lambda x: x[1], reverse=True)[:8]
+    top_names  = [p[0] for p in top]
+    top_counts = [p[1] for p in top]
+
+    # ── Username found rate ───────────────────────────
+    total_found   = sum(r.get('summary', {}).get('found', 0) for r in reports if r.get('type') == 'username')
+    total_checked = sum(r.get('summary', {}).get('total', 0) for r in reports if r.get('type') == 'username')
+    found_rate    = round((total_found / total_checked * 100) if total_checked else 0, 1)
+
+    # ── Domain stats ──────────────────────────────────
+    d_reach = sum(1 for r in reports if r.get('type') == 'domain' and r.get('results', {}).get('reachable'))
+    d_ssl   = sum(1 for r in reports if r.get('type') == 'domain' and r.get('results', {}).get('ssl'))
+    d_rate  = round((d_reach / domain_count * 100) if domain_count else 0, 1)
+
+    # ── Avg response time ─────────────────────────────
+    times = [
+        r['results'].get('response_time')
+        for r in reports
+        if r.get('type') == 'domain' and r.get('results', {}).get('response_time')
+    ]
+    avg_ms = round(sum(times) / len(times)) if times else 0
+
+    data = {
+        'total':        len(reports),
+        'uname_count':  uname_count,
+        'domain_count': domain_count,
+        'found_rate':   found_rate,
+        'd_reach':      d_reach,
+        'd_rate':       d_rate,
+        'd_ssl':        d_ssl,
+        'avg_ms':       avg_ms,
+        'day_labels':   day_labels,
+        'day_counts':   day_counts,
+        'top_names':    top_names,
+        'top_counts':   top_counts,
+    }
+    return render_template('stats.html', stats=data, active='stats')
+
 @app.route('/reports/clear', methods=['POST'])
 def clear_reports():
     if os.path.exists(REPORTS_FILE):
