@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Username Scan — CID{% endblock %}
+{% block breadcrumb %}Username Scan{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Module 01</div>
+  <h1 class="page-title">Username Scan</h1>
+  <p class="page-sub">Check username availability across 16 public platforms simultaneously.</p>
+</div>
+
+<!-- ── Search Form ─────────────────────────────────── -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-search" style="color:var(--cyan);"></i> &nbsp;Target Username</div>
+  <form method="POST" data-loading="SCANNING PLATFORMS...">
+    <div class="input-group">
+      <input
+        class="form-input"
+        type="text"
+        name="username"
+        placeholder="e.g.  john_doe"
+        value="{{ searched or '' }}"
+        required
+        autocomplete="off"
+        spellcheck="false"
+        maxlength="50"
+      />
+      <button class="btn btn-primary" type="submit">
+        <i class="fas fa-satellite-dish"></i> SCAN
+      </button>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text-dim);">
+      <i class="fas fa-info-circle"></i> &nbsp;
+      Checks: GitHub · GitLab · Twitter/X · Instagram · Reddit · TikTok · YouTube · Twitch · Pinterest · LinkedIn · Medium · Dev.to · HackerNews · Steam · SoundCloud · Pastebin
+    </div>
+  </form>
+</div>
+
+{% if results %}
+
+<!-- ── Summary ──────────────────────────────────────── -->
+<div class="summary-row fade-in" style="margin-bottom:24px;">
+  <div class="sum-item">
+    <div class="sum-num">{{ summary.total }}</div>
+    <div class="sum-lbl">Platforms</div>
+  </div>
+  <div class="sum-item" style="border-color:rgba(16,185,129,.25);">
+    <div class="sum-num" style="color:var(--green);">{{ summary.found }}</div>
+    <div class="sum-lbl">Found</div>
+  </div>
+  <div class="sum-item" style="border-color:rgba(244,63,94,.25);">
+    <div class="sum-num" style="color:var(--red);">{{ summary.not_found }}</div>
+    <div class="sum-lbl">Not Found</div>
+  </div>
+  <div class="sum-item" style="border-color:rgba(139,92,246,.25);">
+    <div class="sum-num" style="color:var(--violet);">{{ summary.errors }}</div>
+    <div class="sum-lbl">Errors / Timeouts</div>
+  </div>
+</div>
+
+<!-- ── Results Grid ─────────────────────────────────── -->
+<div class="card">
+  <div class="card-label" style="display:flex;align-items:center;justify-content:space-between;">
+    <span><i class="fas fa-grip-horizontal" style="color:var(--cyan);"></i> &nbsp;Results for
+      <code>{{ searched }}</code>
+    </span>
+    <span style="color:var(--text-dim);font-size:10px;">
+      Click a <span style="color:var(--green);">found</span> card to open profile
+    </span>
+  </div>
+
+  <div class="platforms-grid">
+    {% for r in results %}
+    <div
+      class="platform-card {{ r.status }} fade-in"
+      data-url="{{ r.url }}"
+      style="cursor: {% if r.status == 'found' %}pointer{% else %}default{% endif %};"
+      title="{{ r.url }}"
+    >
+      <div class="pc-icon">{{ r.icon }}</div>
+      <div class="pc-name">{{ r.platform }}</div>
+      <div class="pc-footer">
+
+        {% if r.status == 'found' %}
+          <span class="badge badge-found"><i class="fas fa-check-circle"></i> Found</span>
+        {% elif r.status == 'not_found' %}
+          <span class="badge badge-notfound"><i class="fas fa-times-circle"></i> Not Found</span>
+        {% elif r.status == 'timeout' %}
+          <span class="badge badge-timeout"><i class="fas fa-clock"></i> Timeout</span>
+        {% else %}
+          <span class="badge badge-unknown"><i class="fas fa-question-circle"></i> Unknown</span>
+        {% endif %}
+
+        {% if r.ms %}
+          <span class="pc-ms">{{ r.ms }}ms</span>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+
+<!-- Placeholder when no search done -->
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-user-secret"></i></div>
+    <div class="empty-title">Ready to scan</div>
+    <div class="empty-text">Enter a username above to check its presence across platforms.</div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

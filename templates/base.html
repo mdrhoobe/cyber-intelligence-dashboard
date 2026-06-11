@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}CID — Cyber Intelligence Dashboard{% endblock %}</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- Sidebar overlay (mobile) -->
+<div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:150;backdrop-filter:blur(3px);"
+     onclick="document.getElementById('sidebar').classList.remove('open');this.style.display='none';"></div>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spin-ring"></div>
+  <div class="load-text" id="loadingTxt">SCANNING...</div>
+</div>
+
+<!-- App Layout -->
+<div class="app-layout">
+
+  <!-- ── Sidebar ──────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="logo-badge">⬡</div>
+      <div class="logo-text">
+        <span class="l-main">CID</span>
+        <span class="l-sub">Cyber Intelligence</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Modules</div>
+
+      <a href="{{ url_for('dashboard') }}"
+         class="nav-link {% if active == 'dashboard' %}active{% endif %}">
+        <i class="fas fa-th-large"></i>
+        <span>Dashboard</span>
+      </a>
+
+      <a href="{{ url_for('username') }}"
+         class="nav-link {% if active == 'username' %}active{% endif %}">
+        <i class="fas fa-user-secret"></i>
+        <span>Username Scan</span>
+      </a>
+
+      <a href="{{ url_for('domain') }}"
+         class="nav-link {% if active == 'domain' %}active{% endif %}">
+        <i class="fas fa-globe"></i>
+        <span>Domain Analyzer</span>
+      </a>
+
+      <div class="nav-section" style="margin-top:10px;">Reports</div>
+
+      <a href="{{ url_for('reports') }}"
+         class="nav-link {% if active == 'reports' %}active{% endif %}">
+        <i class="fas fa-folder-open"></i>
+        <span>All Reports</span>
+      </a>
+
+      <div class="nav-section" style="margin-top:10px;">Info</div>
+
+      <a href="{{ url_for('about') }}"
+         class="nav-link {% if active == 'about' %}active{% endif %}">
+        <i class="fas fa-info-circle"></i>
+        <span>About</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sys-status">
+        <span class="dot on"></span>
+        System Active
+      </div>
+      <div class="ver">v1.0.0 &nbsp;·&nbsp; Educational</div>
+    </div>
+
+  </aside>
+
+  <!-- ── Main Wrapper ───────────────────────── -->
+  <div class="main-wrapper">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="nav-toggle" id="navToggle">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="breadcrumb">
+          <span>CID</span>
+          <span class="sep">›</span>
+          <span class="here">{% block breadcrumb %}Home{% endblock %}</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="session-tag">
+          <span class="dot on" style="width:5px;height:5px;"></span>
+          Session Active
+        </div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div><!-- /main-wrapper -->
+</div><!-- /app-layout -->
+
+<!-- JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

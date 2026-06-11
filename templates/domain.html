@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% block title %}Domain Analyzer — CID{% endblock %}
+{% block breadcrumb %}Domain Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Module 02</div>
+  <h1 class="page-title">Domain Analyzer</h1>
+  <p class="page-sub">Inspect DNS resolution, HTTP/HTTPS status, SSL, server headers, and response time.</p>
+</div>
+
+<!-- ── Search Form ─────────────────────────────────── -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-globe" style="color:var(--violet);"></i> &nbsp;Target Domain</div>
+  <form method="POST" data-loading="ANALYZING DOMAIN...">
+    <div class="input-group">
+      <input
+        class="form-input"
+        type="text"
+        name="domain"
+        placeholder="e.g.  example.com  or  https://example.com"
+        value="{{ searched or '' }}"
+        required
+        autocomplete="off"
+        spellcheck="false"
+        maxlength="253"
+      />
+      <button class="btn btn-primary" type="submit">
+        <i class="fas fa-search"></i> ANALYZE
+      </button>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text-dim);">
+      <i class="fas fa-info-circle"></i> &nbsp;
+      Checks: DNS Resolution · IP Address · HTTP Status · HTTPS Status · SSL Certificate · Server Header · Response Time
+    </div>
+  </form>
+</div>
+
+{% if result %}
+
+<!-- ── Readout ───────────────────────────────────────── -->
+<div class="card fade-in">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="card-label" style="margin-bottom:4px;">Analysis Report</div>
+      <div class="mono" style="font-size:18px;color:var(--text-hi);font-weight:700;">
+        {{ result.domain }}
+      </div>
+    </div>
+
+    {% if result.reachable %}
+      <span class="badge badge-found" style="font-size:13px;padding:6px 16px;">
+        <i class="fas fa-check-circle"></i> Reachable
+      </span>
+    {% elif result.error %}
+      <span class="badge badge-notfound" style="font-size:13px;padding:6px 16px;">
+        <i class="fas fa-times-circle"></i> Unreachable
+      </span>
+    {% else %}
+      <span class="badge badge-unknown" style="font-size:13px;padding:6px 16px;">
+        <i class="fas fa-question-circle"></i> Unknown
+      </span>
+    {% endif %}
+  </div>
+
+  {% if result.error %}
+  <div style="background:var(--red-dim);border:1px solid rgba(244,63,94,.25);border-radius:var(--r-sm);padding:14px 16px;
+              display:flex;align-items:center;gap:10px;margin-bottom:20px;color:var(--red);font-size:13px;">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ result.error }}
+  </div>
+  {% endif %}
+
+  <!-- Readout Grid -->
+  <div class="readout-grid">
+
+    <!-- IP Address -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-network-wired"></i> &nbsp;IP Address</div>
+      <div class="ri-value {% if result.ip %}ok{% else %}error{% endif %}">
+        {{ result.ip or '—' }}
+      </div>
+    </div>
+
+    <!-- Response Time -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-tachometer-alt"></i> &nbsp;Response Time</div>
+      <div class="ri-value
+        {% if result.response_time and result.response_time < 500 %}ok
+        {% elif result.response_time %}warn
+        {% else %}error{% endif %}">
+        {% if result.response_time %}{{ result.response_time }} ms{% else %}—{% endif %}
+      </div>
+    </div>
+
+    <!-- HTTPS Status -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-lock"></i> &nbsp;HTTPS Status</div>
+      <div class="ri-value
+        {% if result.https_status == 200 %}ok
+        {% elif result.https_status and result.https_status != 'Unreachable' and result.https_status != 'SSL Error' %}warn
+        {% else %}error{% endif %}">
+        {{ result.https_status or '—' }}
+      </div>
+    </div>
+
+    <!-- HTTP Status -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-unlock"></i> &nbsp;HTTP Status</div>
+      <div class="ri-value
+        {% if result.http_status == 200 %}ok
+        {% elif result.http_status and result.http_status != 'Unreachable' %}warn
+        {% else %}error{% endif %}">
+        {{ result.http_status or '—' }}
+      </div>
+    </div>
+
+    <!-- SSL -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-shield-alt"></i> &nbsp;SSL Certificate</div>
+      <div class="ri-value {% if result.ssl %}ok{% else %}error{% endif %}">
+        {% if result.ssl %}✓ Valid{% else %}✗ None / Error{% endif %}
+      </div>
+    </div>
+
+    <!-- Server -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-server"></i> &nbsp;Server</div>
+      <div class="ri-value" style="color:var(--text);">
+        {{ result.server or '—' }}
+      </div>
+    </div>
+
+    <!-- Content-Type -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-file-code"></i> &nbsp;Content-Type</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">
+        {{ result.content_type or '—' }}
+      </div>
+    </div>
+
+    <!-- Redirect -->
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-arrow-right"></i> &nbsp;Redirect</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">
+        {% if result.redirect %}
+          <a href="{{ result.redirect }}" target="_blank" rel="noopener"
+             style="color:var(--cyan);word-break:break-all;">{{ result.redirect }}</a>
+        {% else %}
+          None
+        {% endif %}
+      </div>
+    </div>
+
+  </div><!-- /readout-grid -->
+
+</div><!-- /card -->
+
+{% else %}
+
+<!-- Placeholder when no search done -->
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-globe"></i></div>
+    <div class="empty-title">Ready to analyze</div>
+    <div class="empty-text">Enter a domain name above to begin the analysis.</div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

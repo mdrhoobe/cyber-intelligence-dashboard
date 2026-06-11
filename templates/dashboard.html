@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — CID{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Overview</div>
+  <h1 class="page-title">Intelligence Dashboard</h1>
+  <p class="page-sub">OSINT investigation platform — educational &amp; research use only.</p>
+</div>
+
+<!-- ── Radar + Stats ──────────────────────────────── -->
+<div style="display:grid;grid-template-columns:160px 1fr;gap:24px;align-items:start;margin-bottom:28px;">
+
+  <!-- Radar signature element -->
+  <div class="card" style="padding:24px;text-align:center;">
+    <div class="radar">
+      <div class="radar-h"></div>
+      <div class="radar-v"></div>
+      <div class="radar-sweep"></div>
+      <div class="radar-dot"></div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);letter-spacing:2px;margin-top:14px;">ACTIVE</div>
+  </div>
+
+  <!-- Stats grid -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div class="stat-card c-cyan">
+      <div class="stat-lbl">Total Scans</div>
+      <div class="stat-val">{{ total }}</div>
+      <div class="stat-icon"><i class="fas fa-search"></i></div>
+    </div>
+    <div class="stat-card c-violet">
+      <div class="stat-lbl">Username Scans</div>
+      <div class="stat-val">{{ uname }}</div>
+      <div class="stat-icon"><i class="fas fa-user-secret"></i></div>
+    </div>
+    <div class="stat-card c-green">
+      <div class="stat-lbl">Domain Checks</div>
+      <div class="stat-val">{{ domain }}</div>
+      <div class="stat-icon"><i class="fas fa-globe"></i></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Quick Actions ──────────────────────────────── -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-bolt" style="color:var(--amber);"></i> &nbsp;Launch Module</div>
+  <div class="quick-actions">
+    <a href="{{ url_for('username') }}" class="action-card">
+      <div class="ac-icon cyan"><i class="fas fa-user-secret"></i></div>
+      <div>
+        <div class="ac-title">Username Scan</div>
+        <div class="ac-desc">Search across 16 platforms</div>
+      </div>
+    </a>
+    <a href="{{ url_for('domain') }}" class="action-card">
+      <div class="ac-icon violet"><i class="fas fa-globe"></i></div>
+      <div>
+        <div class="ac-title">Domain Analyzer</div>
+        <div class="ac-desc">DNS · HTTP · SSL · Headers</div>
+      </div>
+    </a>
+    <a href="{{ url_for('reports') }}" class="action-card">
+      <div class="ac-icon" style="background:rgba(245,158,11,.1);color:var(--amber);">
+        <i class="fas fa-folder-open"></i>
+      </div>
+      <div>
+        <div class="ac-title">Reports</div>
+        <div class="ac-desc">View saved investigations</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- ── Recent Activity ────────────────────────────── -->
+<div class="card">
+  <div class="card-label"><i class="fas fa-history" style="color:var(--cyan);"></i> &nbsp;Recent Activity</div>
+
+  {% if recent %}
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Type</th>
+        <th>Target</th>
+        <th>Timestamp</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in recent %}
+      <tr>
+        <td class="mono" style="color:var(--text-dim);">{{ r.id }}</td>
+        <td>
+          {% if r.type == 'username' %}
+            <span class="badge badge-username"><i class="fas fa-user-secret"></i> Username</span>
+          {% else %}
+            <span class="badge badge-domain"><i class="fas fa-globe"></i> Domain</span>
+          {% endif %}
+        </td>
+        <td class="mono" style="color:var(--text-hi);">{{ r.target }}</td>
+        <td style="color:var(--text-dim);font-size:12px;">{{ r.timestamp }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:16px;">
+    <a href="{{ url_for('reports') }}" class="btn btn-outline btn-sm">
+      <i class="fas fa-arrow-right"></i> View All Reports
+    </a>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-satellite-dish"></i></div>
+    <div class="empty-title">No investigations yet</div>
+    <div class="empty-text">Run a Username Scan or Domain Analysis to get started.</div>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Animate stat values */
+document.querySelectorAll('.stat-val').forEach(el => {
+  const target = parseInt(el.textContent) || 0;
+  let current  = 0;
+  if (target === 0) return;
+  const step = Math.ceil(target / 20);
+  const timer = setInterval(() => {
+    current = Math.min(current + step, target);
+    el.textContent = current;
+    if (current >= target) clearInterval(timer);
+  }, 40);
+});
+</script>
+{% endblock %}
