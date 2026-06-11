@@ -2,8 +2,7 @@
 
 A web-based OSINT tool I built while learning Python, Flask, and cybersecurity basics. The idea was to combine a few useful investigation tools in one place instead of jumping between different scripts.
 
-Still a work in progress, but the core modules are working.
-
+The project is actively maintained and new modules are planned.
 ---
 
 ## What it does
@@ -29,7 +28,7 @@ Still a work in progress, but the core modules are working.
 **Requirements:** Python 3.8 or higher
 
 ```bash
-git clone https://github.com/mohammed-s/cyber-intelligence-dashboard.git
+git clone https://github.com/mdrhoobe/cyber-intelligence-dashboard.git
 cd cyber-intelligence-dashboard
 pip install -r requirements.txt
 python app.py
@@ -114,4 +113,4 @@ This project is for educational and research purposes only. Only use it on targe
 
 ---
 
-Built by Mohammed Saleh — learning cybersecurity and OSINT.
+Built by Mohammed Drhoobe — learning cybersecurity and OSINT.
