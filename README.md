@@ -1,252 +1,117 @@
-# ⬡ Cyber Intelligence Dashboard
+# Cyber Intelligence Dashboard
 
-> An educational OSINT web platform built with Python & Flask.  
-> Username investigation · Domain analysis · Report management.
+A web-based OSINT tool I built while learning Python, Flask, and cybersecurity basics. The idea was to combine a few useful investigation tools in one place instead of jumping between different scripts.
 
----
-
-## ✦ Features
-
-| Module | Description |
-|---|---|
-| 🗂 Dashboard | Stats overview, radar indicator, recent activity |
-| 👤 Username Scan | Checks 16 platforms (GitHub, Instagram, Reddit, TikTok…) |
-| 🌐 Domain Analyzer | DNS · IP · HTTP/HTTPS status · SSL · Server headers |
-| 📁 Reports | Auto-saves every investigation as JSON |
-| ℹ️ About | Project info, roadmap, technologies |
+Still a work in progress, but the core modules are working.
 
 ---
 
-## ✦ Screenshots
+## What it does
 
-> Add screenshots to the `screenshots/` folder after running the app.
+**Username scan** — enter any username and it checks across 16 platforms simultaneously (GitHub, Instagram, Reddit, TikTok, Twitch, Steam, and more). Results show whether the account exists, with response time for each platform.
+
+**Domain analyzer** — takes a domain name and returns the IP address, HTTP/HTTPS status codes, SSL certificate status, server header, and response time. Useful for quick recon on a target domain.
+
+**Reports** — every scan is automatically saved to a JSON file so you can go back and review old results without re-running the scan.
+
+**Dashboard** — overview of all your past investigations with quick access to each module.
 
 ---
 
-## ✦ Project Structure
+## Screenshots
+
+*will add after final UI polish*
+
+---
+
+## Setup
+
+**Requirements:** Python 3.8 or higher
+
+```bash
+git clone https://github.com/mohammed-s/cyber-intelligence-dashboard.git
+cd cyber-intelligence-dashboard
+pip install -r requirements.txt
+python app.py
+```
+
+Open `http://127.0.0.1:5000` in your browser.
+
+---
+
+**On Termux (Android):**
+
+```bash
+pkg install python git
+pip install flask requests
+python app.py
+```
+
+---
+
+**On Linux:**
+
+```bash
+sudo apt install python3 python3-pip -y
+pip3 install flask requests
+python3 app.py
+```
+
+---
+
+## Project structure
 
 ```
 cyber-intelligence-dashboard/
-│
-├── app.py                  ← Flask backend (all routes + logic)
-│
+├── app.py                  # Flask backend, all routes and logic
 ├── templates/
-│   ├── base.html           ← Sidebar layout, topbar, fonts
-│   ├── dashboard.html      ← Home stats + radar + quick actions
-│   ├── username.html       ← Username scan + results grid
-│   ├── domain.html         ← Domain readout panel
-│   ├── reports.html        ← Saved investigations table
-│   └── about.html          ← Project info + roadmap + author
-│
+│   ├── base.html           # main layout, sidebar, navigation
+│   ├── dashboard.html
+│   ├── username.html
+│   ├── domain.html
+│   ├── reports.html
+│   └── about.html
 ├── static/
-│   ├── css/style.css       ← Tactical Dark theme
-│   └── js/main.js          ← Clock · Loading · Sidebar toggle
-│
-├── reports/
-│   └── results.json        ← Auto-created on first scan
-│
-├── screenshots/            ← Add your own screenshots here
+│   ├── css/style.css
+│   └── js/main.js
+├── reports/                # scan results saved here as JSON
 ├── requirements.txt
-├── .gitignore
 └── README.md
 ```
 
 ---
 
-## ✦ Setup & Run
+## Platforms checked (username scan)
 
-Choose your platform:
-
----
-
-### 🤖 Android — Termux
-
-```bash
-# 1. Install Termux from F-Droid (not Play Store)
-# 2. Update packages
-pkg update && pkg upgrade -y
-
-# 3. Install Python and Git
-pkg install python git -y
-
-# 4. Clone the project
-git clone https://github.com/YOUR_USERNAME/cyber-intelligence-dashboard.git
-cd cyber-intelligence-dashboard
-
-# 5. Install dependencies
-pip install -r requirements.txt
-
-# 6. Run the app
-python app.py
-```
-
-Open your browser and go to: **`http://127.0.0.1:5000`**
+GitHub, GitLab, Twitter/X, Instagram, Reddit, TikTok, YouTube, Twitch, Pinterest, LinkedIn, Medium, Dev.to, HackerNews, Steam, SoundCloud, Pastebin
 
 ---
 
-### 🐧 Linux (Ubuntu / Debian / Kali)
+## Roadmap
 
-```bash
-# 1. Update system
-sudo apt update && sudo apt upgrade -y
-
-# 2. Install Python 3 and pip (if not already installed)
-sudo apt install python3 python3-pip git -y
-
-# 3. Clone the project
-git clone https://github.com/YOUR_USERNAME/cyber-intelligence-dashboard.git
-cd cyber-intelligence-dashboard
-
-# 4. (Optional but recommended) Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 5. Install dependencies
-pip install -r requirements.txt
-
-# 6. Run the app
-python3 app.py
-```
-
-Open your browser and go to: **`http://127.0.0.1:5000`**
+- [x] Username scanner (16 platforms)
+- [x] Domain analyzer
+- [x] Auto-save reports
+- [ ] SQLite database instead of flat JSON
+- [ ] Search history and filtering
+- [ ] PDF report export
+- [ ] Statistics and charts
+- [ ] More OSINT modules
 
 ---
 
-### 🪟 Windows
+## Known issues / notes
 
-```powershell
-# 1. Install Python from https://python.org (check "Add to PATH")
-# 2. Install Git from https://git-scm.com
-
-# 3. Open Command Prompt or PowerShell
-git clone https://github.com/YOUR_USERNAME/cyber-intelligence-dashboard.git
-cd cyber-intelligence-dashboard
-
-# 4. (Optional) Create a virtual environment
-python -m venv venv
-venv\Scripts\activate
-
-# 5. Install dependencies
-pip install -r requirements.txt
-
-# 6. Run the app
-python app.py
-```
-
-Open your browser and go to: **`http://127.0.0.1:5000`**
+- Some platforms return a 200 status even for usernames that don't exist (they redirect to a default page instead of returning 404). So treat "found" results as leads, not confirmed facts — always verify manually.
+- The app runs in debug mode by default. Not meant for public deployment.
+- Response times vary a lot depending on your connection and how the platform responds.
 
 ---
 
-## ✦ Upload to GitHub — Step by Step
+## Disclaimer
 
-Follow these steps exactly once to publish your project.
-
----
-
-### Step 1 — Create a GitHub Account
-
-Go to **https://github.com** and sign up if you don't have an account.
+This project is for educational and research purposes only. Only use it on targets you have explicit permission to investigate. I'm not responsible for any misuse.
 
 ---
 
-### Step 2 — Create a New Repository
-
-1. Click the **`+`** button (top-right) → **New repository**
-2. Repository name: `cyber-intelligence-dashboard`
-3. Description: `Web-based OSINT dashboard built with Python & Flask`
-4. Set to **Public** (or Private)
-5. ❌ Do NOT check "Initialize this repository" (we'll push our own code)
-6. Click **Create repository**
-
----
-
-### Step 3 — Configure Git (first time only)
-
-```bash
-git config --global user.name "Mohammed Saleh"
-git config --global user.email "your@email.com"
-```
-
----
-
-### Step 4 — Initialize and Push
-
-Run these commands inside your project folder:
-
-```bash
-# Go into the project directory
-cd cyber-intelligence-dashboard
-
-# Initialize git
-git init
-
-# Add all files
-git add .
-
-# First commit
-git commit -m "🚀 Initial commit — Cyber Intelligence Dashboard v1.0.0"
-
-# Set main branch
-git branch -M main
-
-# Link to your GitHub repository (replace YOUR_USERNAME)
-git remote add origin https://github.com/YOUR_USERNAME/cyber-intelligence-dashboard.git
-
-# Push to GitHub
-git push -u origin main
-```
-
-GitHub will ask for your username and password.  
-> ⚠️ Use a **Personal Access Token** instead of your password.  
-> Get one at: **GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic)**
-
----
-
-### Step 5 — Verify
-
-Go to `https://github.com/YOUR_USERNAME/cyber-intelligence-dashboard`  
-Your project should now be live on GitHub. ✅
-
----
-
-### Future Updates (after making changes)
-
-```bash
-git add .
-git commit -m "✨ Added new feature / fixed bug"
-git push
-```
-
----
-
-## ✦ Platforms Checked (Username Scan)
-
-```
-GitHub · GitLab · Dev.to · Twitter/X · Instagram · Reddit
-TikTok · Pinterest · YouTube · Twitch · LinkedIn · Medium
-HackerNews · Steam · SoundCloud · Pastebin
-```
-
----
-
-## ✦ Roadmap
-
-- **v1.0** — Dashboard · Username Scan · Domain Analyzer · Reports ✅
-- **v2.0** — SQLite database · Search history · Statistics charts · Dark mode toggle
-- **v3.0** — PDF export · Interactive charts · REST API
-- **v4.0** — Full OSINT Suite · Threat intelligence · Data visualization
-
----
-
-## ✦ Disclaimer
-
-> This tool is intended for **educational and ethical research purposes only**.  
-> Always obtain proper authorization before investigating any target.  
-> The author is not responsible for any misuse of this software.
-
----
-
-## ✦ Author
-
-**Mohammed Saleh** — Cybersecurity & OSINT Learner  
-GitHub: [@YOUR_USERNAME](https://github.com/YOUR_USERNAME)
+Built by Mohammed Saleh — learning cybersecurity and OSINT.
