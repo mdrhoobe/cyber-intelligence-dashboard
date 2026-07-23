@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}DNS Lookup — CID{% endblock %}
+{% block breadcrumb %}DNS Lookup{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Network Tool 01</div>
+  <h1 class="page-title">DNS Lookup</h1>
+  <p class="page-sub">Query all DNS record types — A, AAAA, MX, NS, TXT, CNAME, SOA, CAA.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-sitemap" style="color:var(--cyan);"></i> &nbsp;Target Domain</div>
+  <form method="POST" data-loading="QUERYING DNS...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="domain"
+             placeholder="e.g. example.com"
+             value="{{ searched or '' }}" required autocomplete="off" spellcheck="false"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-satellite-dish"></i> QUERY</button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+{% if result.error %}
+<div class="card"><div style="background:var(--red-dim);border:1px solid rgba(244,63,94,.25);
+  border-radius:var(--r-sm);padding:14px;color:var(--red);display:flex;gap:10px;align-items:center;">
+  <i class="fas fa-exclamation-triangle"></i> {{ result.error }}
+</div></div>
+{% else %}
+<div class="card fade-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="card-label" style="margin-bottom:4px;">DNS Records</div>
+      <div class="mono" style="font-size:20px;color:var(--text-hi);font-weight:700;">{{ result.domain }}</div>
+    </div>
+    {% if result.has_any %}
+      <span class="badge badge-found"><i class="fas fa-check-circle"></i> Records Found</span>
+    {% else %}
+      <span class="badge badge-notfound"><i class="fas fa-times-circle"></i> No Records</span>
+    {% endif %}
+  </div>
+
+  {% set colors = {'A':'cyan','AAAA':'cyan','MX':'green','NS':'violet','TXT':'amber','CNAME':'cyan','SOA':'violet','CAA':'green'} %}
+  {% for rtype, vals in result.records.items() %}
+  {% if vals %}
+  <div style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;
+                   padding:3px 12px;border-radius:20px;letter-spacing:1px;
+                   background:var(--{{ colors.get(rtype,'cyan') }}-dim);
+                   color:var(--{{ colors.get(rtype,'cyan') }});
+                   border:1px solid rgba(0,200,255,.2);">{{ rtype }}</span>
+      <span style="font-size:11px;color:var(--text-dim);">{{ vals|length }} record{% if vals|length!=1 %}s{% endif %}</span>
+    </div>
+    {% for val in vals %}
+    <div style="font-family:var(--font-mono);font-size:12px;color:var(--text);
+                padding:9px 14px;background:var(--bg-input);border-radius:var(--r-sm);
+                border:1px solid var(--border);margin-bottom:5px;word-break:break-all;">
+      {{ val }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% set total_found = result.records.values()|map('length')|sum %}
+  {% if total_found == 0 %}
+  <div class="empty-state" style="padding:30px;">
+    <div class="empty-icon" style="font-size:30px;"><i class="fas fa-question-circle"></i></div>
+    <div class="empty-text">No DNS records found for this domain.</div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-sitemap"></i></div>
+    <div class="empty-title">Ready to query DNS</div>
+    <div class="empty-text">Enter a domain to retrieve all its DNS records.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

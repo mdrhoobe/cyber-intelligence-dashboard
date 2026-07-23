@@ -1,133 +1,122 @@
 {% extends "base.html" %}
 {% block title %}About — CID{% endblock %}
 {% block breadcrumb %}About{% endblock %}
-
 {% block content %}
 <div class="page-hdr">
   <div class="page-eye">◈ Project Info</div>
   <h1 class="page-title">About CID</h1>
-  <p class="page-sub">Cyber Intelligence Dashboard — built for learning, OSINT practice, and security research.</p>
+  <p class="page-sub">Cyber Intelligence Dashboard v5.0 — 12 OSINT tools in one platform.</p>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+<div style="display:flex;flex-direction:column;gap:20px;">
 
-  <!-- Left Column -->
-  <div style="display:flex;flex-direction:column;gap:20px;">
-
-    <!-- Overview -->
-    <div class="card">
-      <div class="card-label"><i class="fas fa-shield-alt" style="color:var(--cyan);"></i> &nbsp;Overview</div>
-      <p style="font-size:13px;color:var(--text);line-height:1.8;">
-        Cyber Intelligence Dashboard is a web-based OSINT platform developed for educational and research purposes.
-        It combines multiple cybersecurity tools in one unified interface — username investigation, domain analysis,
-        and investigation report management.
-      </p>
-      <div class="divider"></div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <span class="badge badge-found"><i class="fas fa-check"></i> Open Source</span>
-        <span class="badge badge-username"><i class="fas fa-graduation-cap"></i> Educational</span>
-        <span class="badge badge-domain"><i class="fas fa-flask"></i> Research</span>
-      </div>
+  <div class="card">
+    <div class="card-label"><i class="fas fa-shield-alt" style="color:var(--cyan);"></i> &nbsp;Overview</div>
+    <p style="font-size:13px;line-height:1.9;">
+      A web-based OSINT platform combining username investigation, domain analysis, network scanning,
+      and intelligence gathering in one unified interface. Built for educational purposes while
+      learning Python, Flask, and cybersecurity fundamentals.
+    </p>
+    <div class="divider"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span class="badge badge-found">Open Source</span>
+      <span class="badge badge-username">Educational</span>
+      <span class="badge badge-domain">Research</span>
+      <span class="badge badge-unknown">v5.0</span>
     </div>
-
-    <!-- Features -->
-    <div class="card">
-      <div class="card-label"><i class="fas fa-list-check" style="color:var(--green);"></i> &nbsp;Current Features</div>
-      <div style="display:flex;flex-direction:column;gap:10px;">
-        {% set features = [
-          ('fas fa-th-large',      'cyan',   'Dashboard',          'Central hub with stats and activity'),
-          ('fas fa-user-secret',   'cyan',   'Username Scan',      'Check 16 platforms simultaneously'),
-          ('fas fa-globe',         'violet', 'Domain Analyzer',    'DNS · HTTP · HTTPS · SSL · Headers'),
-          ('fas fa-folder-open',   'amber',  'Report Storage',     'Auto-save all investigation results'),
-          ('fas fa-info-circle',   'green',  'About Page',         'Project documentation & roadmap'),
-        ] %}
-        {% for icon, color, title, desc in features %}
-        <div style="display:flex;align-items:center;gap:14px;padding:10px;background:var(--bg-input);border-radius:var(--r-sm);border:1px solid var(--border);">
-          <div style="width:36px;height:36px;border-radius:var(--r-sm);background:var(--{{ color }}-dim);
-                      color:var(--{{ color }});display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-            <i class="{{ icon }}"></i>
-          </div>
-          <div>
-            <div style="font-weight:600;font-size:13px;color:var(--text-hi);">{{ title }}</div>
-            <div style="font-size:11px;color:var(--text-dim);">{{ desc }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-
   </div>
 
-  <!-- Right Column -->
-  <div style="display:flex;flex-direction:column;gap:20px;">
-
-    <!-- Technologies -->
-    <div class="card">
-      <div class="card-label"><i class="fas fa-code" style="color:var(--violet);"></i> &nbsp;Technologies</div>
-      <div class="tech-grid">
-        {% set techs = [
-          ('🐍','Python 3'),('🌶️','Flask'),('📡','Requests'),
-          ('🎨','Bootstrap 5'),('🔤','HTML5 / CSS3'),('⚡','JavaScript'),
-          ('🗄️','SQLite (v2)'),('📄','ReportLab (v3)'),('🐱','Git / GitHub'),
-        ] %}
-        {% for icon, name in techs %}
-        <div class="tech-tag">{{ icon }} {{ name }}</div>
-        {% endfor %}
+  <div class="card">
+    <div class="card-label"><i class="fas fa-tools" style="color:var(--green);"></i> &nbsp;All Modules (12)</div>
+    {% for icon,color,name,desc in [
+      ('fas fa-crosshairs','cyan','Target Analyzer','IP·DNS·Ports·WHOIS·Headers all-in-one'),
+      ('fas fa-user-secret','cyan','Username Scan','Checks 16 platforms simultaneously'),
+      ('fas fa-layer-group','violet','Bulk Scan','Multiple targets at once'),
+      ('fas fa-envelope','green','Email Checker','MX records · provider · disposable check'),
+      ('fas fa-globe','violet','Domain Analyzer','HTTP · HTTPS · SSL · Server info'),
+      ('fas fa-map-marker-alt','cyan','IP Lookup','Geolocation · ISP · proxy detection'),
+      ('fas fa-sitemap','amber','DNS Lookup','All record types A·MX·NS·TXT·SOA·CAA'),
+      ('fas fa-plug','red','Port Scanner','16 common ports · service detection'),
+      ('fas fa-shield-alt','green','Security Headers','A-F grade · CSP · HSTS · XFO'),
+      ('fas fa-search','violet','WHOIS Lookup','Registrar · dates · nameservers'),
+      ('fas fa-hashtag','cyan','Hash Tools','MD5·SHA1·SHA256·SHA512·SHA3 + detect'),
+      ('fas fa-link','amber','URL Analyzer','Parse · redirect · encode · decode'),
+    ] %}
+    <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <div style="width:28px;height:28px;border-radius:6px;background:var(--{{ color }}-dim);
+                  color:var(--{{ color }});display:flex;align-items:center;justify-content:center;
+                  font-size:12px;flex-shrink:0;"><i class="{{ icon }}"></i></div>
+      <div>
+        <div style="font-weight:600;font-size:12px;color:var(--text-hi);">{{ name }}</div>
+        <div style="font-size:10px;color:var(--text-dim);">{{ desc }}</div>
       </div>
     </div>
+    {% endfor %}
+  </div>
 
-    <!-- Roadmap -->
-    <div class="card">
-      <div class="card-label"><i class="fas fa-road" style="color:var(--amber);"></i> &nbsp;Roadmap</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;">
 
-      {% set roadmap = [
-        ('v1.0', 'Current',  'Dashboard · Username Scan · Domain Analyzer · Reports'),
-        ('v2.0', 'Soon',     'SQLite DB · Search History · Statistics · Dark Mode toggle'),
-        ('v3.0', 'Planned',  'PDF Reports · Interactive Charts · API Integration'),
-        ('v4.0', 'Future',   'Full OSINT Suite · Threat Intelligence · Data Viz'),
-      ] %}
-      {% for ver, status, desc in roadmap %}
-      <div class="roadmap-item">
-        <span class="roadmap-ver">{{ ver }}</span>
-        <div>
-          <div style="font-size:13px;font-weight:600;color:var(--text-hi);">{{ status }}</div>
-          <div style="font-size:11px;color:var(--text-dim);margin-top:2px;">{{ desc }}</div>
-        </div>
-      </div>
+  <div class="card">
+    <div class="card-label"><i class="fas fa-code" style="color:var(--violet);"></i> &nbsp;Stack</div>
+    <div class="tech-grid">
+      {% for icon,name in [('🐍','Python 3'),('🌶️','Flask'),('📡','Requests'),
+        ('🗄️','SQLite'),('🔍','dnspython'),('📊','Chart.js'),
+        ('🎨','CSS3'),('⚡','JavaScript'),('🐱','Git/GitHub'),
+        ('📄','ReportLab'),('🔐','hashlib'),('🌐','ip-api.com')] %}
+      <div class="tech-tag">{{ icon }} {{ name }}</div>
       {% endfor %}
     </div>
+  </div>
 
-    <!-- Author -->
-    <div class="card">
-      <div class="card-label"><i class="fas fa-user" style="color:var(--cyan);"></i> &nbsp;Author</div>
-      <div class="author-card">
-        <div class="author-avatar">👨‍💻</div>
-        <div>
-          <div class="author-name">Mohammed Saleh</div>
-          <div class="author-role">Cybersecurity &amp; OSINT Learner</div>
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <a href="https://github.com" target="_blank" rel="noopener"
-               class="btn btn-outline btn-sm">
-              <i class="fab fa-github"></i> GitHub
-            </a>
-          </div>
+  <div class="card">
+    <div class="card-label"><i class="fas fa-road" style="color:var(--amber);"></i> &nbsp;Roadmap</div>
+    {% for ver,status,desc in [
+      ('v1.0','✅ Done','Dashboard · Username · Domain · Reports'),
+      ('v2.0','✅ Done','SQLite · Statistics · Search & Filter'),
+      ('v3.0','✅ Done','Bulk Scan · IP · Email · WHOIS'),
+      ('v4.0','✅ Done','DNS · Port Scanner · Security Headers'),
+      ('v5.0','✅ Done','Target Analyzer · Hash Tools · URL Analyzer'),
+      ('v6.0','🔜 Next','Authentication hardening · API endpoints'),
+      ('v7.0','📋 Planned','Shodan-like index · Threat scoring · Timeline'),
+    ] %}
+    <div class="roadmap-item">
+      <span class="roadmap-ver">{{ ver }}</span>
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--text-hi);">{{ status }}</div>
+        <div style="font-size:11px;color:var(--text-dim);">{{ desc }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="card-label"><i class="fas fa-user" style="color:var(--cyan);"></i> &nbsp;Author</div>
+    <div class="author-card">
+      <div class="author-avatar">👨‍💻</div>
+      <div>
+        <div class="author-name">Mohammed Drhoobe</div>
+        <div class="author-role">Cybersecurity & OSINT Learner</div>
+        <div style="margin-top:10px;">
+          <a href="https://github.com" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+            <i class="fab fa-github"></i> GitHub
+          </a>
         </div>
       </div>
     </div>
-
   </div>
 
-</div><!-- /grid -->
+</div>
+</div>
 
-<!-- Disclaimer -->
-<div style="margin-top:20px;padding:14px 18px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);
-            border-radius:var(--r-sm);display:flex;gap:12px;align-items:flex-start;">
+<div style="margin-top:20px;padding:14px 18px;background:rgba(245,158,11,.06);
+            border:1px solid rgba(245,158,11,.2);border-radius:var(--r-sm);
+            display:flex;gap:12px;align-items:flex-start;">
   <i class="fas fa-exclamation-triangle" style="color:var(--amber);margin-top:2px;flex-shrink:0;"></i>
   <div style="font-size:12px;color:var(--text-dim);line-height:1.7;">
     <strong style="color:var(--amber);">Educational Use Only.</strong>
-    This tool is intended for ethical, legal, and educational purposes only.
-    Always obtain proper authorization before conducting any investigation. The author is not responsible for misuse.
+    Always obtain proper authorization before investigating any target. Port scanning and network probing without permission may be illegal.
   </div>
 </div>
-
 {% endblock %}

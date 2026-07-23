@@ -1,95 +1,72 @@
-/* ================================================
-   CYBER INTELLIGENCE DASHBOARD — main.js
-   Author: Mohammed Saleh
-================================================ */
+/* ── Theme ──────────────────────────────────────── */
+function applyTheme(theme) {
+  const isLight = theme === 'light';
+  document.body.classList.toggle('light', isLight);
+  const icon  = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+  if (icon)  icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+  if (label) label.textContent = isLight ? 'LIGHT' : 'DARK';
+}
 
-/* ── Clock ─────────────────────────────────────── */
+function toggleTheme() {
+  const next = document.body.classList.contains('light') ? 'dark' : 'light';
+  localStorage.setItem('cid-theme', next);
+  applyTheme(next);
+}
+
+// Apply on page load
+applyTheme(localStorage.getItem('cid-theme') || 'dark');
+
+/* ── Clock ──────────────────────────────────────── */
 function updateClock() {
   const el = document.getElementById('clock');
   if (!el) return;
-  const now = new Date();
-  const hh  = String(now.getHours()).padStart(2, '0');
-  const mm  = String(now.getMinutes()).padStart(2, '0');
-  const ss  = String(now.getSeconds()).padStart(2, '0');
-  el.textContent = `${hh}:${mm}:${ss}`;
+  const n = new Date();
+  el.textContent = [n.getHours(), n.getMinutes(), n.getSeconds()]
+    .map(v => String(v).padStart(2, '0')).join(':');
 }
 updateClock();
 setInterval(updateClock, 1000);
 
 /* ── Loading Overlay ────────────────────────────── */
-function showLoading(msg) {
-  const overlay = document.getElementById('loadingOverlay');
-  const txt     = document.getElementById('loadingTxt');
-  if (!overlay) return;
-  if (txt && msg) txt.textContent = msg;
-  overlay.classList.add('active');
-}
-
-function hideLoading() {
-  const overlay = document.getElementById('loadingOverlay');
-  if (overlay) overlay.classList.remove('active');
-}
-
-/* Attach to search forms */
 document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('loadingOverlay');
 
-  /* Search forms trigger loading */
-  const forms = document.querySelectorAll('[data-loading]');
-  forms.forEach(form => {
-    form.addEventListener('submit', (e) => {
-      const msg = form.dataset.loading || 'SCANNING...';
-      const input = form.querySelector('input[type=text]');
-      if (input && !input.value.trim()) return; // let HTML validation handle it
-      showLoading(msg);
+  document.querySelectorAll('[data-loading]').forEach(form => {
+    form.addEventListener('submit', () => {
+      const inp = form.querySelector('input[type=text], textarea');
+      if (inp && !inp.value.trim()) return;
+      const txt = document.getElementById('loadingTxt');
+      if (txt) txt.textContent = form.dataset.loading || 'SCANNING...';
+      if (overlay) overlay.classList.add('active');
     });
   });
 
-  /* Sidebar toggle (mobile) */
   const toggle  = document.getElementById('navToggle');
   const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('sidebarOverlay');
-
+  const sOver   = document.getElementById('sidebarOverlay');
   if (toggle && sidebar) {
     toggle.addEventListener('click', () => {
       sidebar.classList.toggle('open');
-      if (overlay) overlay.classList.toggle('active');
+      if (sOver) sOver.style.display =
+        sidebar.classList.contains('open') ? 'block' : 'none';
     });
   }
 
-  if (overlay) {
-    overlay.addEventListener('click', () => {
-      sidebar.classList.remove('open');
-      overlay.classList.remove('active');
-    });
-  }
-
-  /* Fade-in on results */
-  const results = document.querySelectorAll('.fade-in');
-  results.forEach((el, i) => {
-    el.style.animationDelay = `${i * 0.04}s`;
-    el.style.opacity = '0';
-  });
-
-  /* Platform card: open link on click */
   document.querySelectorAll('.platform-card').forEach(card => {
     card.addEventListener('click', () => {
-      const url = card.dataset.url;
-      if (url && card.classList.contains('found')) {
-        window.open(url, '_blank', 'noopener,noreferrer');
-      }
+      if (card.classList.contains('found') && card.dataset.url)
+        window.open(card.dataset.url, '_blank', 'noopener,noreferrer');
     });
   });
 
-  /* Confirm before clearing reports */
   const clearBtn = document.getElementById('clearReports');
   if (clearBtn) {
-    clearBtn.addEventListener('click', (e) => {
-      if (!confirm('Clear all reports? This cannot be undone.')) {
+    clearBtn.addEventListener('click', e => {
+      if (!confirm('Clear all reports? This cannot be undone.'))
         e.preventDefault();
-      }
     });
   }
 
-  /* Auto-hide loading if page loaded with results (back button etc.) */
-  hideLoading();
+  if (overlay) overlay.classList.remove('active');
 });

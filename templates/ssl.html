@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}SSL Inspector — CID{% endblock %}
+{% block breadcrumb %}SSL Inspector{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Network Tool 04</div>
+  <h1 class="page-title">SSL Inspector</h1>
+  <p class="page-sub">Certificate details, expiry countdown, issuer, SANs and wildcard detection.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-lock" style="color:var(--green);"></i> &nbsp;Target Domain</div>
+  <form method="POST" data-loading="INSPECTING SSL...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="domain"
+             placeholder="e.g. example.com"
+             value="{{ searched or '' }}" required autocomplete="off"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> INSPECT</button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+{% if result.error %}
+<div class="card"><div style="background:var(--red-dim);border:1px solid rgba(244,63,94,.25);
+  border-radius:var(--r-sm);padding:14px;color:var(--red);display:flex;gap:10px;">
+  <i class="fas fa-exclamation-triangle"></i> {{ result.error }}
+</div></div>
+{% else %}
+
+<!-- Days Countdown -->
+<div style="display:grid;grid-template-columns:180px 1fr;gap:20px;margin-bottom:20px;">
+  <div class="card" style="text-align:center;padding:28px 20px;">
+    {% if result.expired %}
+      {% set cnt_color = 'red' %}
+    {% elif result.soon %}
+      {% set cnt_color = 'amber' %}
+    {% else %}
+      {% set cnt_color = 'green' %}
+    {% endif %}
+    <div style="font-family:var(--font-mono);font-size:52px;font-weight:700;
+                color:var(--{{ cnt_color }});line-height:1;">
+      {% if result.expired %}✗{% else %}{{ result.days_left }}{% endif %}
+    </div>
+    <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:8px;">
+      {% if result.expired %}EXPIRED{% else %}Days Left{% endif %}
+    </div>
+    {% if result.wildcard %}
+    <div style="margin-top:12px;">
+      <span class="badge badge-username" style="font-size:10px;"><i class="fas fa-star"></i> Wildcard</span>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-label" style="margin-bottom:14px;">Certificate Details</div>
+    <div class="readout-grid" style="grid-template-columns:1fr;">
+      {% for label,val,cls in [
+        ('Common Name', result.cn, ''),
+        ('Organization', result.org, ''),
+        ('Issuer', result.issuer, ''),
+        ('Issuer CN', result.issuer_cn, ''),
+        ('Valid From', result.not_before, 'ok'),
+        ('Expires', result.not_after, 'warn' if result.soon else ('error' if result.expired else 'ok')),
+      ] %}
+      <div class="readout-item" style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="ri-label" style="margin-bottom:0;min-width:110px;">{{ label }}</div>
+        <div class="ri-value {{ cls }}" style="font-size:12px;text-align:right;">{{ val or '—' }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- SANs -->
+{% if result.san %}
+<div class="card">
+  <div class="card-label"><i class="fas fa-list" style="color:var(--cyan);"></i> &nbsp;Subject Alternative Names ({{ result.san|length }})</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;">
+    {% for san in result.san %}
+    <div style="font-family:var(--font-mono);font-size:12px;padding:8px 12px;
+                background:var(--bg-input);border:1px solid var(--border);
+                border-radius:var(--r-sm);color:{% if san.startswith('*') %}var(--amber){% else %}var(--text){% endif %};">
+      {{ san }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-lock"></i></div>
+    <div class="empty-title">Ready to inspect</div>
+    <div class="empty-text">Enter a domain to inspect its SSL certificate.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

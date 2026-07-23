@@ -1,0 +1,456 @@
+{% extends "base.html" %}
+{% block title %}Target Analyzer — CID{% endblock %}
+{% block breadcrumb %}Target Analyzer{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Flagship Module</div>
+  <h1 class="page-title">Target Analyzer</h1>
+  <p class="page-sub">Enter any IP or domain — 6 modules run simultaneously in one report.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;border-color:rgba(0,200,255,.25);">
+  <div class="card-label">
+    <i class="fas fa-crosshairs" style="color:var(--cyan);"></i> &nbsp;Target
+  </div>
+  <form method="POST" data-loading="RUNNING ALL MODULES...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="target"
+             placeholder="e.g.  github.com  or  8.8.8.8"
+             value="{{ searched or '' }}" required autocomplete="off" spellcheck="false"
+             style="font-size:15px;padding:14px 18px;"/>
+      <button class="btn btn-primary" type="submit" style="padding:14px 28px;">
+        <i class="fas fa-crosshairs"></i> ANALYZE ALL
+      </button>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;">
+      {% for tool in ['IP Geolocation','DNS Records','Port Scan','WHOIS','Security Headers','HTTP/SSL'] %}
+      <span style="font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:5px;">
+        <i class="fas fa-check-circle" style="color:var(--green);font-size:9px;"></i>{{ tool }}
+      </span>
+      {% endfor %}
+    </div>
+  </form>
+</div>
+
+{% if not result %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-crosshairs"></i></div>
+    <div class="empty-title">All-in-one analysis</div>
+    <div class="empty-text">Runs 6 modules simultaneously — results in one comprehensive report.</div>
+  </div>
+</div>
+
+{% else %}
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div class="mono" style="font-size:22px;font-weight:700;color:var(--text-hi);">{{ result.clean }}</div>
+    <div style="margin-top:4px;">
+      {% if result.is_ip %}
+        <span class="badge badge-domain" style="font-size:10px;"><i class="fas fa-network-wired"></i> IP Address</span>
+      {% else %}
+        <span class="badge badge-username" style="font-size:10px;"><i class="fas fa-globe"></i> Domain</span>
+      {% endif %}
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {% if result.domain_info and result.domain_info.reachable %}
+      <span class="badge badge-found"><i class="fas fa-check-circle"></i> Reachable</span>
+    {% endif %}
+    {% if result.domain_info and result.domain_info.ssl %}
+      <span class="badge badge-found"><i class="fas fa-lock"></i> SSL</span>
+    {% endif %}
+    {% if result.ports and result.ports.open > 0 %}
+      <span class="badge badge-unknown"><i class="fas fa-plug"></i> {{ result.ports.open }} ports open</span>
+    {% endif %}
+    {% if result.ip_info and result.ip_info.get('proxy') %}
+      <span class="badge badge-notfound"><i class="fas fa-mask"></i> Proxy/VPN</span>
+    {% endif %}
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+  <div class="sum-item" style="border-color:rgba(0,200,255,.2);">
+    <div class="sum-num" style="font-size:18px;color:var(--cyan);">
+      {% if result.ip_info and result.ip_info.get('status')=='success' %}{{ result.ip_info.get('query','—') }}{% else %}—{% endif %}
+    </div>
+    <div class="sum-lbl">IP Address</div>
+  </div>
+  <div class="sum-item" style="border-color:rgba(16,185,129,.2);">
+    <div class="sum-num" style="font-size:18px;color:var(--green);">
+      {% if result.ip_info and result.ip_info.get('status')=='success' %}{{ result.ip_info.get('country','—') }}{% else %}—{% endif %}
+    </div>
+    <div class="sum-lbl">Country</div>
+  </div>
+  <div class="sum-item" style="border-color:rgba(245,158,11,.2);">
+    <div class="sum-num" style="font-size:18px;color:var(--amber);">
+      {% if result.ports %}{{ result.ports.open }}{% else %}—{% endif %}
+    </div>
+    <div class="sum-lbl">Open Ports</div>
+  </div>
+  <div class="sum-item" style="border-color:rgba(139,92,246,.2);">
+    <div class="sum-num" style="font-size:18px;color:var(--violet);">
+      {% if result.headers and result.headers.score is not none %}{{ result.headers.score }}%{% else %}—{% endif %}
+    </div>
+    <div class="sum-lbl">Security Score</div>
+  </div>
+</div>
+
+{% if threat %}
+<div class="card fade-in" style="margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+    <div style="text-align:center;min-width:90px;">
+      <div style="font-family:var(--font-mono);font-size:42px;font-weight:700;color:var(--{{ threat.color }});">
+        {{ threat.score }}
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Threat Score</div>
+    </div>
+    <div style="flex:1;min-width:200px;">
+      <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--{{ threat.color }});margin-bottom:10px;">
+        {{ threat.level }}
+      </div>
+      <div style="height:6px;background:var(--bg-input);border-radius:3px;overflow:hidden;margin-bottom:12px;">
+        <div style="height:100%;width:{{ threat.score }}%;background:var(--{{ threat.color }});border-radius:3px;"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        {% for flag in threat.flags %}
+        <span style="padding:4px 10px;border-radius:20px;font-size:11px;
+                     background:var(--{{ 'red' if flag.sev=='high' else 'amber' if flag.sev=='medium' else 'bg-input' }}-dim);
+                     color:var(--{{ 'red' if flag.sev=='high' else 'amber' if flag.sev=='medium' else 'text-dim' }});">
+          <i class="fas fa-flag" style="font-size:9px;margin-right:4px;"></i>{{ flag.msg }}
+        </span>
+        {% endfor %}
+        {% if not threat.flags %}
+        <span class="badge badge-found"><i class="fas fa-check-circle"></i> No threats detected</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div style="display:flex;gap:0;margin-bottom:0;border-bottom:1px solid var(--border);overflow-x:auto;">
+  {% for tid, tlabel, ticon in [
+    ('network','Network','fas fa-network-wired'),
+    ('web','Web','fas fa-globe'),
+    ('intel','Intelligence','fas fa-brain'),
+    ('ports','Ports','fas fa-plug'),
+    ('ssl','SSL','fas fa-lock'),
+    ('tech','Tech','fas fa-microchip'),
+  ] %}
+  <button onclick="showTab('{{ tid }}')" id="tab-btn-{{ tid }}" class="tab-btn"
+    style="padding:10px 16px;background:none;border:none;border-bottom:2px solid transparent;
+           color:var(--text-dim);font-family:var(--font-mono);font-size:11px;letter-spacing:1px;
+           cursor:pointer;text-transform:uppercase;transition:all .2s;white-space:nowrap;
+           margin-bottom:-1px;flex-shrink:0;">
+    <i class="{{ ticon }}" style="margin-right:5px;"></i>{{ tlabel }}
+  </button>
+  {% endfor %}
+</div>
+
+<div style="margin-top:20px;">
+
+<div id="panel-network" class="tab-content">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-label"><i class="fas fa-map-marker-alt" style="color:var(--cyan);"></i> &nbsp;IP Geolocation</div>
+      {% if result.ip_info and result.ip_info.get('status')=='success' %}
+      {% set ip = result.ip_info %}
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        {% for label, val in [
+          ('IP', ip.get('query','—')),
+          ('Country', ip.get('country','—') ~ ' (' ~ ip.get('countryCode','') ~ ')'),
+          ('City', ip.get('city','—') ~ ', ' ~ ip.get('regionName','—')),
+          ('Timezone', ip.get('timezone','—')),
+          ('ISP', ip.get('isp','—')),
+          ('Org', ip.get('org','—')),
+          ('AS', ip.get('as','—')),
+        ] %}
+        <div class="readout-item" style="display:flex;justify-content:space-between;padding:9px 14px;">
+          <div class="ri-label" style="margin-bottom:0;min-width:80px;">{{ label }}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text);text-align:right;word-break:break-all;">{{ val }}</div>
+        </div>
+        {% endfor %}
+        <div class="readout-item" style="display:flex;justify-content:space-between;padding:9px 14px;">
+          <div class="ri-label" style="margin-bottom:0;">Threat</div>
+          <div>
+            {% if ip.get('proxy') %}<span class="badge badge-notfound" style="font-size:9px;">Proxy</span>{% endif %}
+            {% if ip.get('hosting') %}<span class="badge badge-unknown" style="font-size:9px;">Hosting</span>{% endif %}
+            {% if not ip.get('proxy') and not ip.get('hosting') %}<span class="badge badge-found" style="font-size:9px;">Clean</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div style="color:var(--text-dim);text-align:center;padding:20px;">No IP data available</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div class="card-label"><i class="fas fa-sitemap" style="color:var(--violet);"></i> &nbsp;DNS Summary</div>
+      {% if result.dns and result.dns.records %}
+      {% set dcolors = {'A':'cyan','AAAA':'cyan','MX':'green','NS':'violet','TXT':'amber','CNAME':'cyan','SOA':'violet','CAA':'green'} %}
+      {% for rtype, vals in result.dns.records.items() if vals %}
+      <div style="margin-bottom:10px;">
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+                     background:var(--{{ dcolors.get(rtype,'cyan') }}-dim);color:var(--{{ dcolors.get(rtype,'cyan') }});">{{ rtype }}</span>
+        {% for v in vals[:2] %}
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text);padding:4px 8px;margin-top:3px;
+                    background:var(--bg-input);border-radius:4px;word-break:break-all;">{{ v[:60] }}{% if v|length > 60 %}…{% endif %}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="color:var(--text-dim);text-align:center;padding:20px;">
+        {% if result.is_ip %}Not applicable for IP{% else %}No records found{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="panel-web" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-label"><i class="fas fa-globe" style="color:var(--cyan);"></i> &nbsp;HTTP / SSL</div>
+      {% if result.domain_info %}
+      {% set di = result.domain_info %}
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        {% for label, val, cls in [
+          ('HTTPS', di.https_status|string, 'ok' if di.https_status==200 else 'warn'),
+          ('HTTP',  di.http_status|string,  'ok' if di.http_status==200 else 'warn'),
+          ('SSL',   '✓ Valid' if di.ssl else '✗ None', 'ok' if di.ssl else 'error'),
+          ('Response', (di.response_time|string ~ ' ms') if di.response_time else '—', 'ok' if di.response_time and di.response_time < 500 else 'warn'),
+          ('Server', di.server or '—', ''),
+          ('Content-Type', di.content_type or '—', ''),
+        ] %}
+        <div class="readout-item" style="display:flex;justify-content:space-between;padding:9px 14px;">
+          <div class="ri-label" style="margin-bottom:0;min-width:100px;">{{ label }}</div>
+          <div class="ri-value {{ cls }}" style="font-size:12px;text-align:right;">{{ val }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="color:var(--text-dim);text-align:center;padding:20px;">No web data</div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div class="card-label"><i class="fas fa-shield-alt" style="color:var(--green);"></i> &nbsp;Security Headers</div>
+      {% if result.headers and not result.headers.error %}
+      {% set h = result.headers %}
+      {% set gc = 'green' if h.score>=75 else 'amber' if h.score>=50 else 'red' %}
+      <div style="text-align:center;margin-bottom:14px;">
+        <div style="font-family:var(--font-mono);font-size:42px;font-weight:700;color:var(--{{ gc }});">{{ h.grade }}</div>
+        <div style="height:5px;background:var(--bg-input);border-radius:3px;margin:8px 0;overflow:hidden;">
+          <div style="height:100%;width:{{ h.score }}%;background:var(--{{ gc }});border-radius:3px;"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);">{{ h.found|length }}/{{ h.found|length + h.missing|length }} headers</div>
+      </div>
+      {% for hk, meta in h.found.items() %}
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <i class="fas fa-check-circle" style="color:var(--green);font-size:10px;"></i>
+        <span style="font-size:11px;color:var(--text);">{{ meta.name }}</span>
+      </div>
+      {% endfor %}
+      {% for m in h.missing %}
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);">
+        <i class="fas fa-times-circle" style="color:var(--red);font-size:10px;"></i>
+        <span style="font-size:11px;color:var(--text-dim);">{{ m.name }}</span>
+        <span style="margin-left:auto;font-size:9px;color:var(--{{ 'red' if m.risk=='high' else 'amber' if m.risk=='medium' else 'text-dim' }});">{{ m.risk }}</span>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="color:var(--text-dim);text-align:center;padding:20px;">Could not retrieve headers</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="panel-intel" class="tab-content" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+      <div class="card-label"><i class="fas fa-search" style="color:var(--violet);"></i> &nbsp;WHOIS</div>
+      {% if result.whois and not result.whois.get('error') %}
+      {% set w = result.whois %}
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        {% for label, val in [
+          ('Registrar', w.registrar), ('Country', w.country),
+          ('Org', w.org), ('Created', w.creation_date),
+          ('Expires', w.expiration_date), ('Updated', w.updated_date),
+        ] %}
+        <div class="readout-item" style="display:flex;justify-content:space-between;padding:9px 14px;">
+          <div class="ri-label" style="margin-bottom:0;min-width:80px;">{{ label }}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text);text-align:right;word-break:break-all;">{{ val or '—' }}</div>
+        </div>
+        {% endfor %}
+        {% if w.name_servers %}
+        <div class="readout-item" style="padding:9px 14px;">
+          <div class="ri-label">Nameservers</div>
+          {% for ns in w.name_servers[:3] %}
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--violet);margin-top:3px;">{{ ns }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div style="color:var(--text-dim);text-align:center;padding:20px;">
+        {% if result.is_ip %}Not available for IP{% else %}WHOIS unavailable{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div class="card-label"><i class="fas fa-sitemap" style="color:var(--cyan);"></i> &nbsp;Full DNS Records</div>
+      {% if result.dns and result.dns.records %}
+      {% set dcolors2 = {'A':'cyan','AAAA':'cyan','MX':'green','NS':'violet','TXT':'amber','CNAME':'cyan','SOA':'violet','CAA':'green'} %}
+      {% for rtype, vals in result.dns.records.items() if vals %}
+      <div style="margin-bottom:12px;">
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;
+                     background:var(--{{ dcolors2.get(rtype,'cyan') }}-dim);color:var(--{{ dcolors2.get(rtype,'cyan') }});">{{ rtype }}</span>
+        {% for v in vals %}
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text);padding:4px 8px;margin-top:3px;
+                    background:var(--bg-input);border-radius:4px;word-break:break-all;">{{ v }}</div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="color:var(--text-dim);text-align:center;padding:20px;">
+        {% if result.is_ip %}Not applicable for IP{% else %}No records{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div id="panel-ports" class="tab-content" style="display:none;">
+  {% if result.ports and not result.ports.error %}
+  <div style="display:grid;grid-template-columns:160px 1fr;gap:20px;">
+    <div class="card" style="text-align:center;padding:28px 16px;">
+      <div style="font-family:var(--font-mono);font-size:52px;font-weight:700;
+                  color:{% if result.ports.open > 0 %}var(--amber){% else %}var(--green){% endif %};line-height:1;">
+        {{ result.ports.open }}
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-top:8px;text-transform:uppercase;">Open Ports</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--cyan);margin-top:8px;">{{ result.ports.ip or result.clean }}</div>
+    </div>
+    <div class="card">
+      <table class="data-table">
+        <thead><tr><th>Port</th><th>Service</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for p in result.ports.ports %}
+          <tr>
+            <td class="mono" style="color:var(--cyan);">{{ p.port }}</td>
+            <td>{{ p.service }}</td>
+            <td>
+              {% if p.status == 'open' %}<span class="badge badge-found"><i class="fas fa-door-open"></i> OPEN</span>
+              {% elif p.status == 'closed' %}<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);">closed</span>
+              {% else %}<span style="font-family:var(--font-mono);font-size:10px;color:var(--violet);">filtered</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="card"><div style="color:var(--text-dim);text-align:center;padding:40px;">Port data not available</div></div>
+  {% endif %}
+</div>
+
+<div id="panel-ssl" class="tab-content" style="display:none;">
+  {% if result.ssl and not result.ssl.get('error') %}
+  {% set s = result.ssl %}
+  {% set dc = 'red' if s.expired else 'amber' if s.soon else 'green' %}
+  <div style="display:grid;grid-template-columns:160px 1fr;gap:20px;">
+    <div class="card" style="text-align:center;padding:28px 16px;">
+      <div style="font-family:var(--font-mono);font-size:52px;font-weight:700;color:var(--{{ dc }});line-height:1;">
+        {% if s.expired %}✗{% else %}{{ s.days_left }}{% endif %}
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-top:8px;">
+        {% if s.expired %}EXPIRED{% else %}DAYS LEFT{% endif %}
+      </div>
+      {% if s.wildcard %}
+      <div style="margin-top:10px;"><span class="badge badge-username" style="font-size:10px;"><i class="fas fa-star"></i> Wildcard</span></div>
+      {% endif %}
+    </div>
+    <div class="card">
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        {% for label, val in [
+          ('CN', s.cn), ('Org', s.org), ('Issuer', s.issuer),
+          ('Issuer CN', s.issuer_cn), ('Valid From', s.not_before), ('Expires', s.not_after),
+        ] %}
+        <div class="readout-item" style="display:flex;justify-content:space-between;padding:9px 14px;">
+          <div class="ri-label" style="margin-bottom:0;min-width:90px;">{{ label }}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text);text-align:right;word-break:break-all;">{{ val or '—' }}</div>
+        </div>
+        {% endfor %}
+        {% if s.san %}
+        <div class="readout-item" style="padding:9px 14px;">
+          <div class="ri-label">SANs</div>
+          {% for san in s.san[:4] %}
+          <div style="font-family:var(--font-mono);font-size:10px;color:{% if san.startswith('*') %}var(--amber){% else %}var(--text){% endif %};margin-top:3px;">{{ san }}</div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card"><div style="color:var(--text-dim);text-align:center;padding:40px;">
+    {% if result.is_ip %}SSL not available for IP targets
+    {% elif result.ssl %}{{ result.ssl.get('error','SSL unavailable') }}
+    {% else %}SSL data not available{% endif %}
+  </div></div>
+  {% endif %}
+</div>
+
+<div id="panel-tech" class="tab-content" style="display:none;">
+  {% if result.tech and result.tech.get('tech') and not result.tech.get('error') %}
+  {% set tcc = {'Server':'cyan','Backend':'violet','Frontend':'green','CMS':'amber','CDN':'cyan','Analytics':'violet','Security':'green','Database':'amber'} %}
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-label" style="margin-bottom:14px;">
+      <i class="fas fa-microchip" style="color:var(--violet);"></i> &nbsp;{{ result.tech.total }} Technologies Detected
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      {% for cat, items in result.tech.tech.items() %}
+        {% for item in items %}
+        <span style="padding:5px 14px;border-radius:20px;font-family:var(--font-mono);font-size:11px;
+                     background:var(--{{ tcc.get(cat,'cyan') }}-dim);color:var(--{{ tcc.get(cat,'cyan') }});
+                     border:1px solid rgba(0,200,255,.15);">{{ item }}</span>
+        {% endfor %}
+      {% endfor %}
+    </div>
+  </div>
+  {% else %}
+  <div class="card"><div style="color:var(--text-dim);text-align:center;padding:40px;">
+    {% if result.is_ip %}Not available for IP targets{% else %}No technologies detected{% endif %}
+  </div></div>
+  {% endif %}
+</div>
+
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showTab(id) {
+  document.querySelectorAll('[id^="panel-"]').forEach(function(el) {
+    el.style.display = 'none';
+  });
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.style.borderBottomColor = 'transparent';
+    btn.style.color = 'var(--text-dim)';
+  });
+  var panel = document.getElementById('panel-' + id);
+  if (panel) panel.style.display = 'block';
+  var btn = document.getElementById('tab-btn-' + id);
+  if (btn) {
+    btn.style.borderBottomColor = 'var(--cyan)';
+    btn.style.color = 'var(--cyan)';
+  }
+}
+document.addEventListener('DOMContentLoaded', function() {
+  showTab('network');
+});
+</script>
+{% endblock %}

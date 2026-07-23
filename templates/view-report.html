@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Report #{{ report.id }} — CID{% endblock %}
+{% block breadcrumb %}<a href="{{ url_for('reports') }}" style="color:var(--cyan);">Reports</a> › #{{ report.id }}{% endblock %}
+{% block content %}
+
+<div class="page-hdr">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+    <a href="{{ url_for('reports') }}" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Back</a>
+<a href="{{ url_for('export_pdf', report_id=report.id) }}"
+   class="btn btn-outline btn-sm" style="color:var(--red);border-color:rgba(244,63,94,.4);">
+  <i class="fas fa-file-pdf"></i> Export PDF
+</a>
+    {% if report.type=='username' %}
+      <span class="badge badge-username"><i class="fas fa-user-secret"></i> Username Scan</span>
+    {% else %}
+      <span class="badge badge-domain"><i class="fas fa-globe"></i> Domain Analysis</span>
+    {% endif %}
+  </div>
+  <h1 class="page-title">{{ report.target }}</h1>
+  <p class="page-sub">Report ID: <code>#{{ report.id }}</code> · {{ report.timestamp }}</p>
+</div>
+
+{% if report.type == 'username' %}
+
+<!-- Username Report -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;">
+  <div class="stat-card c-cyan">
+    <div class="stat-lbl">Total Platforms</div>
+    <div class="stat-val">{{ report.summary.get('total', 0) }}</div>
+  </div>
+  <div class="stat-card c-green">
+    <div class="stat-lbl">Found</div>
+    <div class="stat-val">{{ report.summary.get('found', 0) }}</div>
+  </div>
+  <div class="stat-card c-red">
+    <div class="stat-lbl">Not Found</div>
+    <div class="stat-val">{{ report.summary.get('not_found', 0) }}</div>
+  </div>
+  <div class="stat-card c-violet">
+    <div class="stat-lbl">Errors</div>
+    <div class="stat-val">{{ report.summary.get('errors', 0) }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-label"><i class="fas fa-grip-horizontal" style="color:var(--cyan);"></i> &nbsp;Platform Results</div>
+  <div class="platforms-grid">
+    {% for r in report.results %}
+    <div class="platform-card {{ r.status }}" style="cursor:{% if r.status=='found' %}pointer{% else %}default{% endif %};"
+         title="{{ r.url }}"
+         onclick="{% if r.status=='found' %}window.open('{{ r.url }}','_blank','noopener,noreferrer'){% endif %}">
+      <div class="pc-icon">{{ r.icon }}</div>
+      <div class="pc-name">{{ r.platform }}</div>
+      <div class="pc-footer">
+        {% if r.status=='found' %}<span class="badge badge-found"><i class="fas fa-check-circle"></i> Found</span>
+        {% elif r.status=='not_found' %}<span class="badge badge-notfound"><i class="fas fa-times-circle"></i> Not Found</span>
+        {% elif r.status=='timeout' %}<span class="badge badge-timeout"><i class="fas fa-clock"></i> Timeout</span>
+        {% else %}<span class="badge badge-unknown"><i class="fas fa-question-circle"></i> Unknown</span>{% endif %}
+        {% if r.ms %}<span class="pc-ms">{{ r.ms }}ms</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Found profiles table -->
+{% set found = report.results | selectattr('status', 'equalto', 'found') | list %}
+{% if found %}
+<div class="card" style="margin-top:24px;">
+  <div class="card-label"><i class="fas fa-link" style="color:var(--green);"></i> &nbsp;Found Profiles</div>
+  <table class="data-table">
+    <thead><tr><th>Platform</th><th>Link</th><th>Response Time</th></tr></thead>
+    <tbody>
+      {% for r in found %}
+      <tr>
+        <td>{{ r.platform }}</td>
+        <td><a href="{{ r.url }}" target="_blank" rel="noopener" style="color:var(--cyan);word-break:break-all;">{{ r.url }}</a></td>
+        <td class="mono">{{ r.ms }}ms</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% elif report.type == 'domain' %}
+
+<!-- Domain Report -->
+{% set d = report.results %}
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div class="card-label" style="margin-bottom:4px;">Analysis Result</div>
+    <div class="mono" style="font-size:18px;color:var(--text-hi);font-weight:700;">{{ report.target }}</div>
+  </div>
+  {% if d.reachable %}
+    <span class="badge badge-found" style="font-size:13px;padding:6px 16px;"><i class="fas fa-check-circle"></i> Reachable</span>
+  {% else %}
+    <span class="badge badge-notfound" style="font-size:13px;padding:6px 16px;"><i class="fas fa-times-circle"></i> Unreachable</span>
+  {% endif %}
+</div>
+
+<div class="card">
+  {% if d.error %}
+  <div style="background:var(--red-dim);border:1px solid rgba(244,63,94,.25);border-radius:var(--r-sm);
+              padding:14px 16px;display:flex;gap:10px;margin-bottom:20px;color:var(--red);font-size:13px;">
+    <i class="fas fa-exclamation-triangle"></i> {{ d.error }}
+  </div>
+  {% endif %}
+
+  <div class="readout-grid">
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-network-wired"></i> IP Address</div>
+      <div class="ri-value {% if d.ip %}ok{% else %}error{% endif %}">{{ d.ip or '—' }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-tachometer-alt"></i> Response Time</div>
+      <div class="ri-value {% if d.response_time and d.response_time < 500 %}ok{% elif d.response_time %}warn{% else %}error{% endif %}">
+        {% if d.response_time %}{{ d.response_time }} ms{% else %}—{% endif %}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-lock"></i> HTTPS Status</div>
+      <div class="ri-value {% if d.https_status==200 %}ok{% elif d.https_status and d.https_status not in ['Unreachable','SSL Error'] %}warn{% else %}error{% endif %}">
+        {{ d.https_status or '—' }}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-unlock"></i> HTTP Status</div>
+      <div class="ri-value {% if d.http_status==200 %}ok{% elif d.http_status and d.http_status != 'Unreachable' %}warn{% else %}error{% endif %}">
+        {{ d.http_status or '—' }}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-shield-alt"></i> SSL Certificate</div>
+      <div class="ri-value {% if d.ssl %}ok{% else %}error{% endif %}">
+        {% if d.ssl %}✓ Valid{% else %}✗ None / Error{% endif %}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-server"></i> Server</div>
+      <div class="ri-value" style="color:var(--text);">{{ d.server or '—' }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-file-code"></i> Content-Type</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">{{ d.content_type or '—' }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-arrow-right"></i> Redirect</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">
+        {% if d.redirect %}<a href="{{ d.redirect }}" target="_blank" style="color:var(--cyan);word-break:break-all;">{{ d.redirect }}</a>
+        {% else %}None{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

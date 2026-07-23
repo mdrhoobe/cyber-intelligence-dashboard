@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Email Checker — CID{% endblock %}
+{% block breadcrumb %}Email Checker{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ OSINT Tool 02</div>
+  <h1 class="page-title">Email Checker</h1>
+  <p class="page-sub">Validate format, check MX records, detect provider and disposable emails.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-envelope" style="color:var(--cyan);"></i> &nbsp;Target Email</div>
+  <form method="POST" data-loading="CHECKING EMAIL...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="email"
+             placeholder="e.g. user@example.com"
+             value="{{ searched or '' }}" required autocomplete="off" spellcheck="false"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> CHECK</button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+<div class="card fade-in">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <div class="card-label" style="margin-bottom:4px;">Result</div>
+      <div class="mono" style="font-size:18px;color:var(--text-hi);font-weight:700;">{{ result.email }}</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      {% if result.valid_format and result.mx_found %}
+        <span class="badge badge-found"><i class="fas fa-check-circle"></i> Valid</span>
+      {% elif result.valid_format %}
+        <span class="badge badge-unknown"><i class="fas fa-question-circle"></i> No MX</span>
+      {% else %}
+        <span class="badge badge-notfound"><i class="fas fa-times-circle"></i> Invalid</span>
+      {% endif %}
+      {% if result.disposable %}
+        <span class="badge badge-notfound"><i class="fas fa-trash"></i> Disposable</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="readout-grid">
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-check"></i> Format Valid</div>
+      <div class="ri-value {% if result.valid_format %}ok{% else %}error{% endif %}">
+        {% if result.valid_format %}✓ Valid format{% else %}✗ Invalid format{% endif %}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-at"></i> Domain</div>
+      <div class="ri-value mono" style="color:var(--cyan);">{{ result.domain or '—' }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-mail-bulk"></i> MX Records</div>
+      <div class="ri-value {% if result.mx_found %}ok{% else %}error{% endif %}">
+        {% if result.mx_found %}✓ Found ({{ result.mx_records|length }}){% else %}✗ None found{% endif %}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-tag"></i> Provider</div>
+      <div class="ri-value" style="color:var(--text);">{{ result.provider }}</div>
+    </div>
+  </div>
+
+  {% if result.mx_records %}
+  <div style="margin-top:16px;">
+    <div class="ri-label" style="margin-bottom:10px;"><i class="fas fa-server"></i> MX Servers</div>
+    {% for mx in result.mx_records %}
+    <div style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);
+                padding:7px 12px;background:var(--bg-input);border-radius:var(--r-sm);
+                border:1px solid var(--border);margin-bottom:6px;">
+      {{ mx }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if result.error %}
+  <div style="margin-top:16px;background:var(--amber-dim);border:1px solid rgba(245,158,11,.25);
+              border-radius:var(--r-sm);padding:12px 14px;color:var(--amber);font-size:12px;">
+    <i class="fas fa-exclamation-triangle"></i> {{ result.error }}
+  </div>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-envelope"></i></div>
+    <div class="empty-title">Ready to check</div>
+    <div class="empty-text">Enter an email address above to begin.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

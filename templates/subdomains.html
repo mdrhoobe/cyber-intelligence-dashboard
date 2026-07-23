@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Subdomain Scanner — CID{% endblock %}
+{% block breadcrumb %}Subdomain Scanner{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Network Tool 05</div>
+  <h1 class="page-title">Subdomain Scanner</h1>
+  <p class="page-sub">Discover subdomains using DNS resolution against a curated wordlist of {{ 50 }} common names.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-project-diagram" style="color:var(--cyan);"></i> &nbsp;Target Domain</div>
+  <form method="POST" data-loading="SCANNING SUBDOMAINS...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="domain"
+             placeholder="e.g. example.com (without www)"
+             value="{{ searched or '' }}" required autocomplete="off"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-radar"></i> SCAN</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-dim);">
+      <i class="fas fa-info-circle"></i> Checks 50 common subdomain names via DNS resolution — no brute force
+    </div>
+  </form>
+</div>
+
+{% if result %}
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+  <div class="stat-card c-cyan">
+    <div class="stat-lbl">Checked</div>
+    <div class="stat-val">{{ result.checked }}</div>
+    <div class="stat-icon"><i class="fas fa-search"></i></div>
+  </div>
+  <div class="stat-card {% if result.count > 0 %}c-amber{% else %}c-green{% endif %}">
+    <div class="stat-lbl">Found</div>
+    <div class="stat-val">{{ result.count }}</div>
+    <div class="stat-icon"><i class="fas fa-sitemap"></i></div>
+  </div>
+  <div class="stat-card c-violet">
+    <div class="stat-lbl">Target</div>
+    <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-hi);margin-top:6px;">{{ result.domain }}</div>
+    <div class="stat-icon"><i class="fas fa-globe"></i></div>
+  </div>
+</div>
+
+{% if result.found %}
+<div class="card fade-in">
+  <div class="card-label"><i class="fas fa-project-diagram" style="color:var(--cyan);"></i> &nbsp;Discovered Subdomains</div>
+  <table class="data-table">
+    <thead><tr><th>#</th><th>Subdomain</th><th>IP Address</th><th>Action</th></tr></thead>
+    <tbody>
+      {% for s in result.found %}
+      <tr class="fade-in">
+        <td class="mono" style="color:var(--text-dim);">{{ loop.index }}</td>
+        <td class="mono" style="color:var(--cyan);">{{ s.subdomain }}</td>
+        <td class="mono" style="color:var(--text);">{{ s.ip }}</td>
+        <td>
+          <a href="{{ url_for('analyze') }}" onclick="sessionStorage.setItem('analyze_target','{{ s.subdomain }}')"
+             class="btn btn-outline btn-sm">
+            <i class="fas fa-crosshairs"></i> Analyze
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card">
+  <div class="empty-state" style="padding:40px;">
+    <div class="empty-icon" style="font-size:36px;"><i class="fas fa-check-circle" style="color:var(--green);opacity:.5;"></i></div>
+    <div class="empty-title">No subdomains found</div>
+    <div class="empty-text">None of the {{ result.checked }} common subdomain names resolved for {{ result.domain }}.</div>
+  </div>
+</div>
+{% endif %}
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-project-diagram"></i></div>
+    <div class="empty-title">Ready to scan</div>
+    <div class="empty-text">Enter a root domain to discover its subdomains.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

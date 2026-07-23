@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Port Scanner — CID{% endblock %}
+{% block breadcrumb %}Port Scanner{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Network Tool 02</div>
+  <h1 class="page-title">Port Scanner</h1>
+  <p class="page-sub">Scan 16 common ports — FTP, SSH, HTTP, HTTPS, MySQL, Redis, MongoDB and more.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-plug" style="color:var(--cyan);"></i> &nbsp;Target Host</div>
+  <form method="POST" data-loading="SCANNING PORTS...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="host"
+             placeholder="e.g. example.com or 192.168.1.1"
+             value="{{ searched or '' }}" required autocomplete="off" spellcheck="false"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-radar"></i> SCAN</button>
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-dim);">
+      <i class="fas fa-exclamation-triangle" style="color:var(--amber);"></i>
+      Only scan hosts you have permission to test.
+    </div>
+  </form>
+</div>
+
+{% if result %}
+{% if result.error %}
+<div class="card"><div style="background:var(--red-dim);border:1px solid rgba(244,63,94,.25);
+  border-radius:var(--r-sm);padding:14px;color:var(--red);display:flex;gap:10px;">
+  <i class="fas fa-exclamation-triangle"></i> {{ result.error }}
+</div></div>
+{% else %}
+
+<!-- Summary -->
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;">
+  <div class="stat-card c-cyan">
+    <div class="stat-lbl">Host</div>
+    <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-hi);margin-top:6px;">{{ result.host }}</div>
+    <div class="stat-icon"><i class="fas fa-server"></i></div>
+  </div>
+  <div class="stat-card c-violet">
+    <div class="stat-lbl">IP Address</div>
+    <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-hi);margin-top:6px;">{{ result.ip }}</div>
+    <div class="stat-icon"><i class="fas fa-network-wired"></i></div>
+  </div>
+  <div class="stat-card {% if result.open > 0 %}c-amber{% else %}c-green{% endif %}">
+    <div class="stat-lbl">Open Ports</div>
+    <div class="stat-val">{{ result.open }}</div>
+    <div class="stat-icon"><i class="fas fa-door-open"></i></div>
+  </div>
+</div>
+
+<div class="card fade-in">
+  <div class="card-label"><i class="fas fa-list" style="color:var(--cyan);"></i> &nbsp;Port Results</div>
+  <table class="data-table">
+    <thead>
+      <tr><th>Port</th><th>Service</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      {% for p in result.ports %}
+      <tr>
+        <td class="mono" style="color:var(--cyan);">{{ p.port }}</td>
+        <td style="color:var(--text);">{{ p.service }}</td>
+        <td>
+          {% if p.status == 'open' %}
+            <span class="badge badge-found"><i class="fas fa-door-open"></i> OPEN</span>
+          {% elif p.status == 'closed' %}
+            <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);">closed</span>
+          {% else %}
+            <span class="badge badge-unknown"><i class="fas fa-filter"></i> filtered</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-plug"></i></div>
+    <div class="empty-title">Ready to scan</div>
+    <div class="empty-text">Enter a hostname or IP address to scan common ports.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

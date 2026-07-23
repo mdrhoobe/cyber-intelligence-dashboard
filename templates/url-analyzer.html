@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}URL Analyzer — CID{% endblock %}
+{% block breadcrumb %}URL Analyzer{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Utility 02</div>
+  <h1 class="page-title">URL Analyzer</h1>
+  <p class="page-sub">Parse URL components, detect redirects, encode/decode, and check for suspicious patterns.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-link" style="color:var(--cyan);"></i> &nbsp;Target URL</div>
+  <form method="POST" data-loading="ANALYZING URL...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="url"
+             placeholder="e.g. https://example.com/path?q=1&id=2"
+             value="{{ searched or '' }}" required autocomplete="off" spellcheck="false"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> ANALYZE</button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+<div class="card fade-in" style="margin-bottom:20px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div class="card-label" style="margin-bottom:0;">URL Breakdown</div>
+    <div style="display:flex;gap:8px;">
+      {% if result.suspicious %}
+        <span class="badge badge-notfound"><i class="fas fa-exclamation-triangle"></i> Suspicious Patterns</span>
+      {% else %}
+        <span class="badge badge-found"><i class="fas fa-check-circle"></i> Clean</span>
+      {% endif %}
+      {% if result.redirected %}
+        <span class="badge badge-unknown"><i class="fas fa-arrow-right"></i> Redirected</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="readout-grid">
+    <div class="readout-item">
+      <div class="ri-label">Scheme</div>
+      <div class="ri-value" style="color:{% if result.scheme=='https' %}var(--green){% else %}var(--amber){% endif %};">
+        {{ result.scheme or '—' }}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label">Domain</div>
+      <div class="ri-value mono" style="color:var(--cyan);">{{ result.domain or '—' }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label">Path</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">{{ result.path or '/' }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label">Parameters</div>
+      <div class="ri-value" style="color:var(--text);">{{ result.param_count }} param{% if result.param_count != 1 %}s{% endif %}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label">HTTP Status</div>
+      <div class="ri-value {% if result.status==200 %}ok{% elif result.status %}warn{% else %}error{% endif %}">
+        {{ result.status or '—' }}
+      </div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label">Fragment</div>
+      <div class="ri-value" style="color:var(--text);">{{ result.fragment or '—' }}</div>
+    </div>
+  </div>
+
+  {% if result.params %}
+  <div style="margin-top:16px;">
+    <div class="ri-label" style="margin-bottom:10px;">Query Parameters</div>
+    {% for k, v in result.params.items() %}
+    <div style="display:flex;gap:10px;padding:8px 12px;background:var(--bg-input);
+                border-radius:var(--r-sm);border:1px solid var(--border);margin-bottom:6px;">
+      <span class="mono" style="color:var(--cyan);font-size:12px;">{{ k }}</span>
+      <span style="color:var(--text-dim);">=</span>
+      <span class="mono" style="color:var(--text);font-size:12px;">{{ v }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if result.redirected %}
+  <div style="margin-top:16px;padding:12px;background:var(--amber-dim);border:1px solid rgba(245,158,11,.2);border-radius:var(--r-sm);">
+    <div class="ri-label" style="margin-bottom:6px;color:var(--amber);">Redirected To</div>
+    <a href="{{ result.final_url }}" target="_blank" style="font-family:var(--font-mono);font-size:12px;color:var(--cyan);word-break:break-all;">
+      {{ result.final_url }}
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Encoded versions -->
+<div class="card fade-in">
+  <div class="card-label"><i class="fas fa-code" style="color:var(--violet);"></i> &nbsp;Encodings</div>
+  <div style="display:flex;flex-direction:column;gap:14px;">
+    {% for label, val in [('URL Encoded', result.url_encoded), ('URL Decoded', result.url_decoded), ('Base64 Encoded', result.b64_encoded)] %}
+    <div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;font-family:var(--font-mono);">
+        {{ label }}
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="flex:1;font-family:var(--font-mono);font-size:11px;color:var(--text);
+                    background:var(--bg-input);padding:10px;border-radius:var(--r-sm);
+                    border:1px solid var(--border);word-break:break-all;">{{ val }}</div>
+        <button onclick="navigator.clipboard.writeText('{{ val }}');this.innerHTML='✓'"
+          style="background:none;border:1px solid var(--border);color:var(--text-dim);
+                 border-radius:4px;padding:8px;font-size:12px;cursor:pointer;flex-shrink:0;">
+          <i class="fas fa-copy"></i>
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-link"></i></div>
+    <div class="empty-title">Ready to analyze</div>
+    <div class="empty-text">Enter any URL to parse its components and check for redirects.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

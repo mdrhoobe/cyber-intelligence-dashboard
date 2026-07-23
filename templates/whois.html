@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}WHOIS Lookup — CID{% endblock %}
+{% block breadcrumb %}WHOIS Lookup{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ OSINT Tool 03</div>
+  <h1 class="page-title">WHOIS Lookup</h1>
+  <p class="page-sub">Domain registration info — registrar, dates, nameservers, owner details.</p>
+</div>
+
+<div class="card" style="margin-bottom:24px;">
+  <div class="card-label"><i class="fas fa-search" style="color:var(--violet);"></i> &nbsp;Target Domain</div>
+  <form method="POST" data-loading="QUERYING WHOIS...">
+    <div class="input-group">
+      <input class="form-input" type="text" name="domain"
+             placeholder="e.g. example.com"
+             value="{{ searched or '' }}" required autocomplete="off" spellcheck="false"/>
+      <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> LOOKUP</button>
+    </div>
+  </form>
+</div>
+
+{% if result %}
+{% if not result.error %}
+<div class="card fade-in">
+  <div style="margin-bottom:20px;">
+    <div class="card-label" style="margin-bottom:4px;">WHOIS Data</div>
+    <div class="mono" style="font-size:20px;color:var(--text-hi);font-weight:700;">{{ result.domain }}</div>
+  </div>
+
+  <div class="readout-grid">
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-building"></i> Registrar</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">{{ result.registrar }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-flag"></i> Country</div>
+      <div class="ri-value" style="color:var(--text);">{{ result.country }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-calendar-plus"></i> Created</div>
+      <div class="ri-value ok">{{ result.creation_date }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-calendar-times"></i> Expires</div>
+      <div class="ri-value warn">{{ result.expiration_date }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-sync"></i> Updated</div>
+      <div class="ri-value" style="color:var(--text);">{{ result.updated_date }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-sitemap"></i> Status</div>
+      <div class="ri-value" style="color:var(--text);font-size:11px;">{{ result.status }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-envelope"></i> Emails</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">{{ result.emails }}</div>
+    </div>
+    <div class="readout-item">
+      <div class="ri-label"><i class="fas fa-user-tie"></i> Organization</div>
+      <div class="ri-value" style="color:var(--text);font-size:12px;">{{ result.org }}</div>
+    </div>
+  </div>
+
+  {% if result.name_servers %}
+  <div style="margin-top:16px;">
+    <div class="ri-label" style="margin-bottom:10px;"><i class="fas fa-server"></i> Nameservers</div>
+    {% for ns in result.name_servers %}
+    <div style="font-family:var(--font-mono);font-size:12px;color:var(--violet);
+                padding:7px 12px;background:var(--bg-input);border-radius:var(--r-sm);
+                border:1px solid var(--border);margin-bottom:6px;">
+      {{ ns }}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+
+{% else %}
+<div class="card fade-in">
+  <div style="background:var(--red-dim);border:1px solid rgba(244,63,94,.25);border-radius:var(--r-sm);
+              padding:14px 16px;color:var(--red);display:flex;gap:10px;align-items:center;">
+    <i class="fas fa-exclamation-triangle"></i>
+    {{ result.error }}
+  </div>
+</div>
+{% endif %}
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-search"></i></div>
+    <div class="empty-title">Ready for WHOIS lookup</div>
+    <div class="empty-text">Enter a domain name above to query registration data.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
