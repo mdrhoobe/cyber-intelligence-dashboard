@@ -107,4 +107,4 @@ Port scanning without authorization may be illegal in your jurisdiction.
 
 ---
 
-Built by Mohammed Saleh — learning cybersecurity and OSINT.
+Built by Mohammed Salih — learning cybersecurity and OSINT.
