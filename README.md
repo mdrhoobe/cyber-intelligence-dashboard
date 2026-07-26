@@ -38,8 +38,11 @@ Python 3, Flask, SQLite, dnspython, python-whois, ReportLab, Chart.js
 
 ## Setup
 git clone https://github.com/mdrhoobe/cyber-intelligence-dashboard.git
+
 cd cyber-intelligence-dashboard
+
 pip install -r requirements.txt
+
 python app.py
 
 Open http://127.0.0.1:5000 in your browser.
