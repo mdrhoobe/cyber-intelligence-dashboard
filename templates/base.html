@@ -147,6 +147,12 @@
         <span class="dot on"></span>System Active
       </div>
       <div class="ver">v6.0 · 15 modules</div>
+
+<a href="{{ url_for('api_docs') }}"
+         class="nav-link {% if active=='api_docs' %}active{% endif %}">
+        <i class="fas fa-code"></i><span>API Docs</span>
+      </a>
+
       <a href="{{ url_for('logout') }}"
          style="display:flex;align-items:center;gap:8px;margin-top:12px;font-size:11px;
                 color:var(--text-dim);text-decoration:none;padding:7px 10px;
@@ -155,6 +161,7 @@
          onmouseout="this.style.color='var(--text-dim)';this.style.borderColor='var(--border)'">
         <i class="fas fa-sign-out-alt"></i> Logout
       </a>
+
     </div>
 
   </aside>

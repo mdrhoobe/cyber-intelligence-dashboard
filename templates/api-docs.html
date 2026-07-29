@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}API Docs — CID{% endblock %}
+{% block breadcrumb %}API Docs{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Developer Interface</div>
+  <h1 class="page-title">API Documentation</h1>
+  <p class="page-sub">REST API v1 — JSON responses — key authentication</p>
+</div>
+
+<!-- Key Info -->
+<div class="card" style="margin-bottom:20px;border-color:rgba(57,211,83,.3);">
+  <div class="card-label"><i class="fas fa-key" style="color:var(--amber);"></i> &nbsp;Authentication</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      <div class="ri-label">Header Method</div>
+      <code style="font-size:12px;display:block;padding:10px;margin-top:6px;">X-API-Key: {{ api_key }}</code>
+    </div>
+    <div>
+      <div class="ri-label">Query Param Method</div>
+      <code style="font-size:12px;display:block;padding:10px;margin-top:6px;">?api_key={{ api_key }}</code>
+    </div>
+  </div>
+</div>
+
+<!-- Base URL -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-label"><i class="fas fa-link" style="color:var(--green);"></i> &nbsp;Base URL</div>
+  <code style="font-size:13px;display:block;padding:12px;">http://127.0.0.1:5000/api/v1</code>
+</div>
+
+<!-- Endpoints Table -->
+{% set endpoints = [
+  ('POST','/username',  'username',  'Username scan across 16 platforms',   '{"username": "john_doe"}'),
+  ('POST','/domain',    'domain',    'HTTP/HTTPS/SSL domain analysis',       '{"domain": "example.com"}'),
+  ('POST','/ip',        'ip',        'IP geolocation and threat detection',  '{"ip": "8.8.8.8"}'),
+  ('POST','/dns',       'domain',    'All DNS records A·MX·NS·TXT·SOA·CAA', '{"domain": "example.com"}'),
+  ('POST','/ports',     'host',      'Scan 16 common ports',                 '{"host": "example.com"}'),
+  ('POST','/headers',   'url',       'Security headers A-F grade analysis',  '{"url": "https://example.com"}'),
+  ('POST','/whois',     'domain',    'Domain registration information',      '{"domain": "example.com"}'),
+  ('POST','/ssl',       'domain',    'SSL certificate inspection',           '{"domain": "example.com"}'),
+  ('POST','/email',     'email',     'Email validation and MX check',        '{"email": "user@example.com"}'),
+  ('POST','/hash',      'text',      'Generate 5 hash types',                '{"text": "hello world"}'),
+  ('POST','/url',       'url',       'URL parsing and redirect tracking',    '{"url": "https://example.com/path?q=1"}'),
+  ('POST','/analyze',   'target',    'All-in-one analysis + threat score',   '{"target": "github.com"}'),
+  ('GET', '/reports',   '',          'List reports (?limit=50&type=domain)', ''),
+  ('GET', '/reports/1', '',          'Get single report by ID',              ''),
+  ('GET', '/stats',     '',          'Platform statistics',                  ''),
+] %}
+
+<div class="card">
+  <div class="card-label"><i class="fas fa-code" style="color:var(--green);"></i> &nbsp;Endpoints</div>
+  <table class="data-table">
+    <thead>
+      <tr><th>Method</th><th>Endpoint</th><th>Description</th><th>Body</th></tr>
+    </thead>
+    <tbody>
+      {% for method, path, field, desc, body in endpoints %}
+      <tr>
+        <td>
+          <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 8px;
+                       background:{% if method=='POST' %}var(--green-dim){% else %}var(--blue-dim){% endif %};
+                       color:{% if method=='POST' %}var(--green){% else %}#5a9fd4{% endif %};
+                       border:1px solid {% if method=='POST' %}rgba(57,211,83,.3){% else %}rgba(42,109,181,.3){% endif %};">
+            {{ method }}
+          </span>
+        </td>
+        <td><code style="font-size:11px;">/api/v1{{ path }}</code></td>
+        <td style="font-size:12px;color:var(--text);">{{ desc }}</td>
+        <td>{% if body %}<code style="font-size:10px;">{{ body }}</code>{% else %}<span style="color:var(--text-dim);">—</span>{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Example -->
+<div class="card" style="margin-top:20px;">
+  <div class="card-label"><i class="fas fa-terminal" style="color:var(--amber);"></i> &nbsp;Example — cURL</div>
+  <div style="margin-bottom:16px;">
+    <div class="ri-label" style="margin-bottom:8px;">Username Scan</div>
+    <div style="background:var(--bg-input);border:1px solid var(--border);padding:14px;border-left:2px solid var(--green);">
+      <pre style="font-family:var(--font-mono);font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;">curl -X POST http://127.0.0.1:5000/api/v1/username \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: {{ api_key }}" \
+  -d '{"username": "john_doe"}'</pre>
+    </div>
+  </div>
+  <div style="margin-bottom:16px;">
+    <div class="ri-label" style="margin-bottom:8px;">Target Analyzer</div>
+    <div style="background:var(--bg-input);border:1px solid var(--border);padding:14px;border-left:2px solid var(--amber);">
+      <pre style="font-family:var(--font-mono);font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;">curl -X POST http://127.0.0.1:5000/api/v1/analyze \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: {{ api_key }}" \
+  -d '{"target": "github.com"}'</pre>
+    </div>
+  </div>
+  <div>
+    <div class="ri-label" style="margin-bottom:8px;">Python Example</div>
+    <div style="background:var(--bg-input);border:1px solid var(--border);padding:14px;border-left:2px solid var(--violet);">
+      <pre style="font-family:var(--font-mono);font-size:12px;color:var(--text);white-space:pre-wrap;">import requests
+
+API  = "http://127.0.0.1:5000/api/v1"
+KEY  = "{{ api_key }}"
+HEAD = {"X-API-Key": KEY, "Content-Type": "application/json"}
+
+# IP Lookup
+r = requests.post(f"{API}/ip", json={"ip": "8.8.8.8"}, headers=HEAD)
+print(r.json())</pre>
+    </div>
+  </div>
+</div>
+
+<!-- Response format -->
+<div class="card" style="margin-top:20px;">
+  <div class="card-label"><i class="fas fa-file-code" style="color:var(--violet);"></i> &nbsp;Response Format</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      <div class="ri-label" style="margin-bottom:8px;color:var(--green);">Success</div>
+      <div style="background:var(--bg-input);border:1px solid var(--border);padding:12px;border-left:2px solid var(--green);">
+        <pre style="font-family:var(--font-mono);font-size:11px;color:var(--text);">{
+  "success": true,
+  "data": { ... }
+}</pre>
+      </div>
+    </div>
+    <div>
+      <div class="ri-label" style="margin-bottom:8px;color:var(--red);">Error</div>
+      <div style="background:var(--bg-input);border:1px solid var(--border);padding:12px;border-left:2px solid var(--red);">
+        <pre style="font-family:var(--font-mono);font-size:11px;color:var(--text);">{
+  "success": false,
+  "error": "description"
+}</pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

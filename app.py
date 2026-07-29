@@ -862,6 +862,259 @@ def tech_detect():
             save_report('tech', searched, result)
     return render_template('tech.html', result=result, searched=searched, active='tech')
 
+# ══════════════════════════════════════════════
+#  REST API — v1
+#  Base URL: /api/v1/
+#  Auth: Header  X-API-Key: <key>
+# ══════════════════════════════════════════════
+from flask import jsonify
+from functools import wraps
+
+API_KEY = 'cid-api-2025-ms'   # غيّره بمفتاحك
+
+def api_key_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        key = request.headers.get('X-API-Key') or request.args.get('api_key')
+        if key != API_KEY:
+            return jsonify({'success':False,'error':'Invalid or missing API key'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def api_response(data=None, error=None, status=200):
+    if error:
+        return jsonify({'success':False,'error':error}), status
+    return jsonify({'success':True,'data':data}), status
+
+# ── Info ───────────────────────────────────────
+@app.route('/api/v1')
+def api_index():
+    return jsonify({
+        'name':    'Cyber Intelligence Dashboard API',
+        'version': '1.0',
+        'author':  'Mohammed Saleh',
+        'endpoints': {
+            'POST /api/v1/username':   'Username scan across 16 platforms',
+            'POST /api/v1/domain':     'Domain HTTP/SSL analysis',
+            'POST /api/v1/ip':         'IP geolocation and threat info',
+            'POST /api/v1/dns':        'DNS records lookup',
+            'POST /api/v1/ports':      'Port scanner',
+            'POST /api/v1/headers':    'Security headers analysis',
+            'POST /api/v1/whois':      'WHOIS lookup',
+            'POST /api/v1/ssl':        'SSL certificate inspection',
+            'POST /api/v1/email':      'Email validation and MX check',
+            'POST /api/v1/hash':       'Generate hashes',
+            'POST /api/v1/url':        'URL analysis and parsing',
+            'POST /api/v1/analyze':    'All-in-one target analysis',
+            'GET  /api/v1/reports':    'List all saved reports',
+            'GET  /api/v1/reports/:id':'Get single report',
+            'GET  /api/v1/stats':      'Platform statistics',
+        },
+        'auth': 'Header: X-API-Key or ?api_key=',
+        'note': 'Educational use only'
+    })
+
+# ── Username ───────────────────────────────────
+@app.route('/api/v1/username', methods=['POST'])
+@api_key_required
+def api_username():
+    data     = request.get_json() or {}
+    username = data.get('username','').strip()
+    if not username:
+        return api_response(error='username field required', status=400)
+    results, summary = check_username(username)
+    save_report('username', username, results, summary)
+    return api_response({
+        'username': username,
+        'summary':  summary,
+        'results':  results,
+    })
+
+# ── Domain ─────────────────────────────────────
+@app.route('/api/v1/domain', methods=['POST'])
+@api_key_required
+def api_domain():
+    data   = request.get_json() or {}
+    domain = data.get('domain','').strip()
+    if not domain:
+        return api_response(error='domain field required', status=400)
+    result = check_domain(domain)
+    save_report('domain', domain, result)
+    return api_response(result)
+
+# ── IP ─────────────────────────────────────────
+@app.route('/api/v1/ip', methods=['POST'])
+@api_key_required
+def api_ip():
+    data = request.get_json() or {}
+    ip   = data.get('ip','').strip()
+    if not ip:
+        return api_response(error='ip field required', status=400)
+    result = lookup_ip(ip)
+    save_report('ip_lookup', ip, result)
+    return api_response(result)
+
+# ── DNS ────────────────────────────────────────
+@app.route('/api/v1/dns', methods=['POST'])
+@api_key_required
+def api_dns():
+    data   = request.get_json() or {}
+    domain = data.get('domain','').strip()
+    if not domain:
+        return api_response(error='domain field required', status=400)
+    result = dns_lookup(domain)
+    save_report('dns', domain, result)
+    return api_response(result)
+
+# ── Ports ──────────────────────────────────────
+@app.route('/api/v1/ports', methods=['POST'])
+@api_key_required
+def api_ports():
+    data = request.get_json() or {}
+    host = data.get('host','').strip()
+    if not host:
+        return api_response(error='host field required', status=400)
+    result = port_scan(host)
+    save_report('port_scan', host, result)
+    return api_response(result)
+
+# ── Headers ────────────────────────────────────
+@app.route('/api/v1/headers', methods=['POST'])
+@api_key_required
+def api_headers():
+    data = request.get_json() or {}
+    url  = data.get('url','').strip()
+    if not url:
+        return api_response(error='url field required', status=400)
+    result = check_headers(url)
+    save_report('headers', url, result)
+    return api_response(result)
+
+# ── WHOIS ──────────────────────────────────────
+@app.route('/api/v1/whois', methods=['POST'])
+@api_key_required
+def api_whois():
+    data   = request.get_json() or {}
+    domain = data.get('domain','').strip()
+    if not domain:
+        return api_response(error='domain field required', status=400)
+    result = get_whois(domain)
+    save_report('whois', domain, result)
+    return api_response(result)
+
+# ── SSL ────────────────────────────────────────
+@app.route('/api/v1/ssl', methods=['POST'])
+@api_key_required
+def api_ssl():
+    data   = request.get_json() or {}
+    domain = data.get('domain','').strip()
+    if not domain:
+        return api_response(error='domain field required', status=400)
+    result = ssl_inspect(domain)
+    save_report('ssl', domain, result)
+    return api_response(result)
+
+# ── Email ──────────────────────────────────────
+@app.route('/api/v1/email', methods=['POST'])
+@api_key_required
+def api_email():
+    data  = request.get_json() or {}
+    email = data.get('email','').strip()
+    if not email:
+        return api_response(error='email field required', status=400)
+    result = check_email(email)
+    save_report('email', email, result)
+    return api_response(result)
+
+# ── Hash ───────────────────────────────────────
+@app.route('/api/v1/hash', methods=['POST'])
+@api_key_required
+def api_hash():
+    data = request.get_json() or {}
+    text = data.get('text','')
+    if not text:
+        return api_response(error='text field required', status=400)
+    return api_response({
+        'input':  text,
+        'hashes': generate_hashes(text)
+    })
+
+# ── URL ────────────────────────────────────────
+@app.route('/api/v1/url', methods=['POST'])
+@api_key_required
+def api_url():
+    data = request.get_json() or {}
+    url  = data.get('url','').strip()
+    if not url:
+        return api_response(error='url field required', status=400)
+    return api_response(analyze_url(url))
+
+# ── Analyze (all-in-one) ───────────────────────
+@app.route('/api/v1/analyze', methods=['POST'])
+@api_key_required
+def api_analyze():
+    data   = request.get_json() or {}
+    target = data.get('target','').strip()
+    if not target:
+        return api_response(error='target field required', status=400)
+    result = universal_analyze(target)
+    threat = calculate_threat_score(result)
+    if not result.get('is_ip'):
+        import concurrent.futures
+        clean = result.get('clean','')
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+            f_ssl  = ex.submit(ssl_inspect, clean)
+            f_tech = ex.submit(tech_fingerprint, f'https://{clean}')
+            try:    result['ssl']  = f_ssl.result(timeout=10)
+            except: result['ssl']  = None
+            try:    result['tech'] = f_tech.result(timeout=10)
+            except: result['tech'] = None
+    save_report('analyze', target, result)
+    return api_response({
+        'target':  target,
+        'result':  result,
+        'threat':  threat,
+    })
+
+# ── Reports ────────────────────────────────────
+@app.route('/api/v1/reports', methods=['GET'])
+@api_key_required
+def api_reports():
+    limit = min(int(request.args.get('limit', 50)), 200)
+    rtype = request.args.get('type','').strip()
+    q     = request.args.get('q','').strip()
+    from db import search_reports, get_all_reports
+    reports = search_reports(q, rtype) if (q or rtype) else get_all_reports()
+    return api_response({
+        'count':   len(reports[:limit]),
+        'reports': reports[:limit],
+    })
+
+@app.route('/api/v1/reports/<int:report_id>', methods=['GET'])
+@api_key_required
+def api_report_single(report_id):
+    from db import get_conn
+    with get_conn() as conn:
+        row = conn.execute('SELECT * FROM reports WHERE id=?',(report_id,)).fetchone()
+    if not row:
+        return api_response(error='Report not found', status=404)
+    r = dict(row)
+    r['results'] = json.loads(r['results'])
+    r['summary'] = json.loads(r['summary'])
+    return api_response(r)
+
+# ── Stats ──────────────────────────────────────
+@app.route('/api/v1/stats', methods=['GET'])
+@api_key_required
+def api_stats():
+    from db import get_stats_data
+    return api_response(get_stats_data())
+
+@app.route('/api-docs')
+@login_required
+def api_docs():
+    return render_template('api-docs.html', api_key=API_KEY, active='api_docs')
+
 if __name__ == '__main__':
     print('\n\033[36m  ╔══════════════════════════════════╗')
     print('  ║  CYBER INTELLIGENCE DASHBOARD   ║')
