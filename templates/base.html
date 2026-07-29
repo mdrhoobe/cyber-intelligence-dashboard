@@ -53,6 +53,15 @@
                      padding:1px 5px;border-radius:6px;font-weight:800;">★</span>
         {% endif %}
       </a>
+<a href="{{ url_for('threat_intel') }}"
+         class="nav-link {% if active=='threat' %}active{% endif %}"
+         style="{% if active=='threat' %}color:var(--red);border-left-color:var(--red);background:var(--red-dim);{% endif %}">
+        <i class="fas fa-radiation-alt"></i><span>Threat Intel</span>
+      </a>
+      <a href="{{ url_for('network_map') }}"
+         class="nav-link {% if active=='network_map' %}active{% endif %}">
+        <i class="fas fa-project-diagram"></i><span>Network Map</span>
+      </a>
 
       <!-- OSINT -->
       <div class="nav-section" style="margin-top:10px;">OSINT</div>

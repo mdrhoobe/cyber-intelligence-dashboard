@@ -4,9 +4,9 @@ import requests, socket, time, json, io, re
 from db import (init_db, save_report, get_all_reports,
                 get_recent_reports, count_reports,
                 clear_reports, get_stats_data, search_reports)
-
+from threat import full_threat_report
 app = Flask(__name__)
-app.secret_key = 'cid-secret-2025-ms'
+app.secret_key = 'ms-secret-2026-xyz'
 init_db()
 
 PASSWORD = 'cid2025'
@@ -1109,6 +1109,89 @@ def api_report_single(report_id):
 def api_stats():
     from db import get_stats_data
     return api_response(get_stats_data())
+# ── Threat Intelligence ───────────────────────
+@app.route('/threat', methods=['GET','POST'])
+@login_required
+def threat_intel():
+    result = searched = None
+    if request.method == 'POST':
+        searched = request.form.get('target','').strip()
+        if searched:
+            result = full_threat_report(searched)
+            save_report('threat', searched, result)
+    return render_template('threat.html', result=result,
+                           searched=searched, active='threat')
+
+# ── Network Map ───────────────────────────────
+@app.route('/network-map')
+@login_required
+def network_map():
+    from db import get_all_reports
+    reports = get_all_reports()
+    # Build nodes and edges from saved reports
+    nodes, edges = [], []
+    seen = set()
+
+    for r in reports:
+        target = r.get('target','')
+        rtype  = r.get('type','')
+        res    = r.get('results') or {}
+
+        if target and target not in seen:
+            node_color = {
+                'username':'#39d353','domain':'#7c4dba',
+                'ip_lookup':'#e8a020','analyze':'#39d353',
+                'port_scan':'#cc2936','headers':'#39d353',
+                'ssl':'#39d353','dns':'#7c4dba','whois':'#7c4dba',
+                'subdomain':'#39d353','tech':'#7c4dba','threat':'#cc2936',
+                'email':'#e8a020',
+            }.get(rtype,'#3a5c3a')
+            nodes.append({'id':target,'label':target,'type':rtype,'color':node_color})
+            seen.add(target)
+
+        # Domain → IP edge
+        if rtype == 'domain' and isinstance(res, dict) and res.get('ip'):
+            ip = res['ip']
+            if ip not in seen:
+                nodes.append({'id':ip,'label':ip,'type':'ip','color':'#e8a020'})
+                seen.add(ip)
+            edges.append({'from':target,'to':ip,'label':'resolves to'})
+
+        # Analyze → IP
+        if rtype == 'analyze' and isinstance(res, dict):
+            ip_info = res.get('ip_info') or {}
+            if ip_info.get('query') and ip_info['query'] not in seen:
+                ip = ip_info['query']
+                nodes.append({'id':ip,'label':ip,'type':'ip','color':'#e8a020'})
+                seen.add(ip)
+                edges.append({'from':target,'to':ip,'label':'resolves to'})
+
+        # Subdomain → parent
+        if rtype == 'subdomain' and isinstance(res, dict):
+            for sub in (res.get('found') or [])[:5]:
+                sd = sub.get('subdomain','')
+                if sd and sd not in seen:
+                    nodes.append({'id':sd,'label':sd,'type':'subdomain','color':'#2a6db5'})
+                    seen.add(sd)
+                edges.append({'from':target,'to':sd,'label':'subdomain'})
+
+    return render_template('network-map.html',
+                           nodes=json.dumps(nodes),
+                           edges=json.dumps(edges),
+                           active='network_map')
+
+# ── Threat API ────────────────────────────────
+@app.route('/api/v1/threat', methods=['POST'])
+@api_key_required
+def api_threat():
+    data   = request.get_json() or {}
+    target = data.get('target','').strip()
+    if not target:
+        return api_response(error='target field required', status=400)
+    result = full_threat_report(target)
+    save_report('threat', target, result)
+    return api_response(result)
+
 
 @app.route('/api-docs')
 @login_required

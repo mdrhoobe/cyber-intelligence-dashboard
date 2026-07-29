@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block title %}Network Map — CID{% endblock %}
+{% block breadcrumb %}Network Map{% endblock %}
+{% block extra_head %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Visual Intelligence</div>
+  <h1 class="page-title">Network Map</h1>
+  <p class="page-sub">Visual relationship graph built from all saved investigations.</p>
+</div>
+
+{% if nodes and nodes != '[]' %}
+<!-- Controls -->
+<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+  <button onclick="network.fit()" class="btn btn-outline btn-sm">
+    <i class="fas fa-compress-arrows-alt"></i> Fit
+  </button>
+  <button onclick="network.setOptions({physics:{enabled:true}})" class="btn btn-outline btn-sm">
+    <i class="fas fa-atom"></i> Rearrange
+  </button>
+  <div style="display:flex;gap:12px;margin-left:auto;flex-wrap:wrap;">
+    {% for label, color in [
+      ('Domain','#7c4dba'),('IP','#e8a020'),
+      ('Subdomain','#2a6db5'),('Other','#39d353')
+    ] %}
+    <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);
+                 display:flex;align-items:center;gap:6px;">
+      <span style="width:10px;height:10px;border-radius:50%;background:{{ color }};
+                   display:inline-block;box-shadow:0 0 6px {{ color }};"></span>
+      {{ label }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Map Container -->
+<div class="card" style="padding:0;overflow:hidden;">
+  <div id="network-map"
+       style="width:100%;height:600px;background:var(--bg-base);"></div>
+</div>
+
+<!-- Node Info Panel -->
+<div id="node-info" style="display:none;margin-top:16px;">
+  <div class="card" style="border-color:rgba(57,211,83,.3);">
+    <div class="card-label"><i class="fas fa-info-circle" style="color:var(--green);"></i> &nbsp;Selected Node</div>
+    <div id="node-info-content" style="font-family:var(--font-mono);font-size:12px;color:var(--text);"></div>
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-project-diagram"></i></div>
+    <div class="empty-title">No data to map</div>
+    <div class="empty-text">
+      Run some scans first — the map builds automatically from saved reports.
+      Start with <a href="{{ url_for('analyze') }}">Target Analyzer</a>.
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if nodes and nodes != '[]' %}
+<script>
+var NODES = {{ nodes | safe }};
+var EDGES = {{ edges | safe }};
+
+var container = document.getElementById('network-map');
+
+var visNodes = new vis.DataSet(NODES.map(function(n) {
+  return {
+    id:    n.id,
+    label: n.label.length > 20 ? n.label.substring(0,18)+'…' : n.label,
+    title: n.id,
+    color: {
+      background: n.color + '22',
+      border:     n.color,
+      highlight:  { background: n.color + '44', border: '#fff' },
+      hover:      { background: n.color + '33', border: n.color }
+    },
+    font:  { color: '#c8e8c8', face: 'Share Tech Mono', size: 11 },
+    shape: n.type === 'ip' ? 'diamond' : n.type === 'subdomain' ? 'dot' : 'box',
+    size:  n.type === 'ip' ? 16 : 12,
+    borderWidth: 1,
+    shadow: { enabled: true, color: n.color + '44', size: 8 }
+  };
+}));
+
+var visEdges = new vis.DataSet(EDGES.map(function(e, i) {
+  return {
+    id:     i,
+    from:   e.from,
+    to:     e.to,
+    label:  e.label || '',
+    color:  { color: '#2a4a2a', highlight: '#39d353', hover: '#39d353' },
+    font:   { color: '#3a5c3a', face: 'Share Tech Mono', size: 9, align: 'middle' },
+    arrows: { to: { enabled: true, scaleFactor: 0.6 } },
+    smooth: { type: 'curvedCW', roundness: 0.2 },
+    width:  1,
+    dashes: e.label === 'subdomain'
+  };
+}));
+
+var options = {
+  physics: {
+    enabled:   true,
+    solver:    'forceAtlas2Based',
+    forceAtlas2Based: {
+      gravitationalConstant: -80,
+      centralGravity:        0.01,
+      springLength:          120,
+      springConstant:        0.08,
+      damping:               0.4,
+    },
+    stabilization: { iterations: 100 }
+  },
+  interaction: {
+    hover:        true,
+    tooltipDelay: 100,
+    zoomView:     true,
+    dragView:     true,
+  },
+  layout: { improvedLayout: true }
+};
+
+var network = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+
+// Node click — show info
+network.on('click', function(params) {
+  if (params.nodes.length > 0) {
+    var nodeId = params.nodes[0];
+    var node   = NODES.find(function(n) { return n.id === nodeId; });
+    if (node) {
+      var panel   = document.getElementById('node-info');
+      var content = document.getElementById('node-info-content');
+      panel.style.display = 'block';
+      content.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
+        '<div><span style="color:var(--text-dim)">Target: </span>' + node.id + '</div>' +
+        '<div><span style="color:var(--text-dim)">Type: </span>' + node.type + '</div>' +
+        '</div>' +
+        '<div style="margin-top:10px;">' +
+        '<a href="/analyze" style="color:var(--green);margin-right:12px;" ' +
+        'onclick="sessionStorage.setItem(\'at\',\'' + node.id + '\')">' +
+        '<i class="fas fa-crosshairs"></i> Analyze</a>' +
+        '<a href="/threat" style="color:var(--red);">' +
+        '<i class="fas fa-shield-alt"></i> Threat Check</a>' +
+        '</div>';
+    }
+  } else {
+    document.getElementById('node-info').style.display = 'none';
+  }
+});
+
+// Stop physics after stabilize
+network.on('stabilized', function() {
+  network.setOptions({ physics: { enabled: false } });
+});
+</script>
+{% endif %}
+{% endblock %}
