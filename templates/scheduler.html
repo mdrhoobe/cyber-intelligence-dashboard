@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Scheduled Scans — CID{% endblock %}
+{% block breadcrumb %}Scheduled Scans{% endblock %}
+{% block content %}
+<div class="page-hdr">
+  <div class="page-eye">◈ Automation Module</div>
+  <h1 class="page-title">Scheduled Scans</h1>
+  <p class="page-sub">Automate recurring scans — hourly, daily, or weekly.</p>
+</div>
+
+<!-- Add Schedule Form -->
+<div class="card" style="margin-bottom:24px;border-color:rgba(57,211,83,.2);">
+  <div class="card-label">
+    <i class="fas fa-plus-circle" style="color:var(--green);"></i> &nbsp;New Schedule
+  </div>
+  <form method="POST" action="{{ url_for('scheduler_add') }}">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+      <div>
+        <div class="form-label">Schedule Name</div>
+        <input class="form-input" type="text" name="name"
+               placeholder="e.g. Daily GitHub Check"
+               required autocomplete="off"/>
+      </div>
+
+      <div>
+        <div class="form-label">Target</div>
+        <input class="form-input" type="text" name="target"
+               placeholder="e.g. github.com or 8.8.8.8"
+               required autocomplete="off"/>
+      </div>
+
+      <div>
+        <div class="form-label">Scan Type</div>
+        <select class="form-input" name="scan_type" style="cursor:pointer;">
+          <option value="analyze">Target Analyzer (All-in-one)</option>
+          <option value="domain">Domain Analyzer</option>
+          <option value="ip">IP Lookup</option>
+          <option value="dns">DNS Lookup</option>
+          <option value="ports">Port Scanner</option>
+          <option value="headers">Security Headers</option>
+          <option value="ssl">SSL Inspector</option>
+          <option value="username">Username Scan</option>
+        </select>
+      </div>
+
+      <div>
+        <div class="form-label">Frequency</div>
+        <select class="form-input" name="frequency" style="cursor:pointer;">
+          <option value="every_5m">Every 5 Minutes (test)</option>
+          <option value="hourly">Every Hour</option>
+          <option value="daily" selected>Every Day</option>
+          <option value="weekly">Every Week</option>
+        </select>
+      </div>
+
+    </div>
+    <button class="btn btn-primary" type="submit">
+      <i class="fas fa-clock"></i> CREATE SCHEDULE
+    </button>
+  </form>
+</div>
+
+<!-- Schedules List -->
+{% if schedules %}
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div class="card-label" style="margin-bottom:0;">
+      <i class="fas fa-list" style="color:var(--amber);"></i>
+      &nbsp;Active Schedules ({{ schedules|length }})
+    </div>
+  </div>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Target</th>
+        <th>Type</th>
+        <th>Frequency</th>
+        <th>Last Run</th>
+        <th>Runs</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in schedules %}
+      <tr>
+        <td style="color:var(--text-hi);font-weight:600;">{{ s.name }}</td>
+        <td class="mono" style="color:var(--green);">{{ s.target }}</td>
+        <td>
+          {% set type_icons = {
+            'analyze':'fas fa-crosshairs','domain':'fas fa-globe',
+            'ip':'fas fa-map-marker-alt','dns':'fas fa-sitemap',
+            'ports':'fas fa-plug','headers':'fas fa-shield-alt',
+            'ssl':'fas fa-lock','username':'fas fa-user-secret'
+          } %}
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);">
+            <i class="{{ type_icons.get(s.scan_type,'fas fa-search') }}"
+               style="color:var(--green);margin-right:5px;"></i>
+            {{ s.scan_type }}
+          </span>
+        </td>
+        <td>
+          {% set freq_color = {'every_5m':'red','hourly':'amber','daily':'green','weekly':'violet'} %}
+          <span style="font-family:var(--font-mono);font-size:10px;padding:2px 8px;
+                       background:var(--{{ freq_color.get(s.frequency,'green') }}-dim);
+                       color:var(--{{ freq_color.get(s.frequency,'green') }});
+                       border:1px solid rgba(57,211,83,.2);">
+            {{ s.frequency }}
+          </span>
+        </td>
+        <td style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);">
+          {{ s.last_run or '—' }}
+        </td>
+        <td class="mono" style="color:var(--amber);">{{ s.run_count }}</td>
+        <td>
+          {% if s.active %}
+            <span class="badge badge-found"><i class="fas fa-circle" style="font-size:7px;"></i> Active</span>
+          {% else %}
+            <span class="badge badge-notfound"><i class="fas fa-circle" style="font-size:7px;"></i> Paused</span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <!-- Run Now -->
+            <form method="POST" action="{{ url_for('scheduler_run_now', sid=s.id) }}" style="display:inline;">
+              <button class="btn btn-outline btn-sm" type="submit" title="Run now">
+                <i class="fas fa-play"></i>
+              </button>
+            </form>
+            <!-- Toggle -->
+            <form method="POST" action="{{ url_for('scheduler_toggle', sid=s.id) }}" style="display:inline;">
+              <button class="btn btn-outline btn-sm" type="submit"
+                      title="{% if s.active %}Pause{% else %}Resume{% endif %}">
+                <i class="fas fa-{% if s.active %}pause{% else %}play-circle{% endif %}"></i>
+              </button>
+            </form>
+            <!-- Delete -->
+            <form method="POST" action="{{ url_for('scheduler_delete', sid=s.id) }}" style="display:inline;">
+              <button class="btn btn-danger btn-sm" type="submit" title="Delete"
+                      onclick="return confirm('Delete this schedule?')">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-clock"></i></div>
+    <div class="empty-title">No schedules yet</div>
+    <div class="empty-text">Create a schedule above to automate recurring scans.</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Info Box -->
+<div style="margin-top:20px;padding:14px 18px;background:var(--bg-input);
+            border:1px solid var(--border);border-left:2px solid var(--amber);">
+  <div style="font-family:var(--font-mono);font-size:10px;letter-spacing:2px;
+              color:var(--amber);margin-bottom:8px;">◈ HOW IT WORKS</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+    {% for icon, text in [
+      ('fas fa-plus','Create a schedule with target + frequency'),
+      ('fas fa-robot','CID runs the scan automatically'),
+      ('fas fa-database','Results saved to Reports automatically'),
+      ('fas fa-play','Use Run Now to trigger immediately'),
+    ] %}
+    <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-dim);
+                display:flex;align-items:flex-start;gap:8px;">
+      <i class="{{ icon }}" style="color:var(--green);margin-top:2px;flex-shrink:0;"></i>
+      {{ text }}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}

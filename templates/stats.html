@@ -178,6 +178,50 @@ new Chart(document.getElementById('chartDomain'),{
     plugins:{legend:{position:'bottom',labels:{color:'#c8d8e8',font:{size:11},padding:12,usePointStyle:true}}}}
 });
 {% endif %}
+<!-- All Modules Summary -->
+{% if stats.type_counts %}
+<div class="card" style="margin-top:20px;">
+  <div class="card-label">
+    <i class="fas fa-th" style="color:var(--green);"></i> &nbsp;All Modules Activity
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:4px;">
+    {% set module_info = {
+      'username':  ('fas fa-user-secret', 'green',  'Username Scan'),
+      'domain':    ('fas fa-globe',        'violet', 'Domain Analyzer'),
+      'ip_lookup': ('fas fa-map-marker-alt','amber', 'IP Lookup'),
+      'email':     ('fas fa-envelope',     'green',  'Email Checker'),
+      'whois':     ('fas fa-search',       'violet', 'WHOIS'),
+      'dns':       ('fas fa-sitemap',      'amber',  'DNS Lookup'),
+      'port_scan': ('fas fa-plug',         'red',    'Port Scanner'),
+      'headers':   ('fas fa-shield-alt',   'green',  'Security Headers'),
+      'ssl':       ('fas fa-lock',         'green',  'SSL Inspector'),
+      'subdomain': ('fas fa-project-diagram','cyan', 'Subdomains'),
+      'tech':      ('fas fa-microchip',    'violet', 'Tech Fingerprint'),
+      'threat':    ('fas fa-radiation-alt','red',    'Threat Intel'),
+      'analyze':   ('fas fa-crosshairs',   'green',  'Target Analyzer'),
+      'hash':      ('fas fa-hashtag',      'amber',  'Hash Tools'),
+      'url':       ('fas fa-link',         'amber',  'URL Analyzer'),
+    } %}
+    {% for mtype, cnt in stats.type_counts.items() %}
+    {% set info = module_info.get(mtype, ('fas fa-search','green', mtype.title())) %}
+    <div style="background:var(--bg-input);border:1px solid var(--border);
+                border-left:2px solid var(--{{ info[1] }});
+                padding:12px 14px;display:flex;align-items:center;gap:12px;">
+      <i class="{{ info[0] }}" style="color:var(--{{ info[1] }});font-size:16px;width:20px;text-align:center;"></i>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);
+                    letter-spacing:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          {{ info[2] }}
+        </div>
+        <div style="font-family:var(--font-title);font-size:20px;font-weight:700;
+                    color:var(--{{ info[1] }});margin-top:2px;">{{ cnt }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 </script>
 {% endif %}
 {% endblock %}

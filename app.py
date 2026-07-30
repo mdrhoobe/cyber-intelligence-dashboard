@@ -8,6 +8,12 @@ from threat import full_threat_report
 app = Flask(__name__)
 app.secret_key = 'ms-secret-2026-xyz'
 init_db()
+from scheduler import (
+    start_scheduler, get_all_schedules, get_schedule,
+    create_schedule, add_job, remove_job,
+    delete_schedule_db, toggle_schedule_db
+)
+start_scheduler()
 
 PASSWORD = 'cid2025'
 
@@ -702,11 +708,8 @@ def view_report(report_id):
 @login_required
 def export_pdf(report_id):
     from db import get_conn
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib.units import cm
+    from pdf_gen import generate_pdf
+    from flask import make_response
     with get_conn() as conn:
         row = conn.execute('SELECT * FROM reports WHERE id=?',(report_id,)).fetchone()
     if not row:
@@ -714,6 +717,12 @@ def export_pdf(report_id):
     r = dict(row)
     r['results'] = json.loads(r['results'])
     r['summary'] = json.loads(r['summary'])
+    pdf_bytes = generate_pdf(r)
+    resp = make_response(pdf_bytes)
+    resp.headers['Content-Type']        = 'application/pdf'
+    resp.headers['Content-Disposition'] = f'attachment; filename=CID_Report_{report_id}_{r["target"]}.pdf'
+    return resp
+
     buf  = io.BytesIO()
     doc  = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm,
                              leftMargin=2*cm, rightMargin=2*cm)
@@ -1197,6 +1206,63 @@ def api_threat():
 @login_required
 def api_docs():
     return render_template('api-docs.html', api_key=API_KEY, active='api_docs')
+
+
+# ── Scheduled Scans ───────────────────────────
+@app.route('/scheduler')
+@login_required
+def scheduler_page():
+    schedules = get_all_schedules()
+    return render_template('scheduler.html',
+                           schedules=schedules, active='scheduler')
+
+@app.route('/scheduler/add', methods=['POST'])
+@login_required
+def scheduler_add():
+    name      = request.form.get('name','').strip()
+    target    = request.form.get('target','').strip()
+    scan_type = request.form.get('scan_type','domain')
+    frequency = request.form.get('frequency','daily')
+    if name and target:
+        sid = create_schedule(name, target, scan_type, frequency)
+        add_job(sid, target, scan_type, frequency)
+    return redirect(url_for('scheduler_page'))
+
+@app.route('/scheduler/delete/<int:sid>', methods=['POST'])
+@login_required
+def scheduler_delete(sid):
+    remove_job(sid)
+    delete_schedule_db(sid)
+    return redirect(url_for('scheduler_page'))
+
+@app.route('/scheduler/toggle/<int:sid>', methods=['POST'])
+@login_required
+def scheduler_toggle(sid):
+    s      = get_schedule(sid)
+    active = not bool(s.get('active', 1))
+    toggle_schedule_db(sid, active)
+    if active:
+        add_job(sid, s['target'], s['scan_type'], s['frequency'])
+    else:
+        remove_job(sid)
+    return redirect(url_for('scheduler_page'))
+
+@app.route('/scheduler/run/<int:sid>', methods=['POST'])
+@login_required
+def scheduler_run_now(sid):
+    """Run scan immediately"""
+    from scheduler import run_scheduled_scan
+    s = get_schedule(sid)
+    if s:
+        import threading
+        t = threading.Thread(
+            target=run_scheduled_scan,
+            args=[s['id'], s['target'], s['scan_type']]
+        )
+        t.daemon = True
+        t.start()
+    return redirect(url_for('scheduler_page'))
+
 
 if __name__ == '__main__':
     print('\n\033[36m  ╔══════════════════════════════════╗')

@@ -107,6 +107,10 @@ def get_stats_data():
     with get_conn() as conn:
         rows      = conn.execute('SELECT type,results,summary,timestamp FROM reports').fetchall()
         type_rows = conn.execute('SELECT type, COUNT(*) as cnt FROM reports GROUP BY type').fetchall()
+        type_counts = dict(sorted(
+        {r['type']: r['cnt'] for r in type_rows}.items(),
+        key=lambda x: x[1], reverse=True
+    ))
     
     type_counts = {r['type']: r['cnt'] for r in type_rows}
     
