@@ -15,6 +15,7 @@ from scheduler import (
 )
 start_scheduler()
 
+from phone_osint import phone_osint
 PASSWORD = 'cid2025'
 
 def login_required(f):
@@ -1263,6 +1264,31 @@ def scheduler_run_now(sid):
         t.start()
     return redirect(url_for('scheduler_page'))
 
+# ── Phone OSINT ───────────────────────────────
+@app.route('/phone', methods=['GET','POST'])
+@login_required
+def phone_lookup():
+    result = searched = None
+    if request.method == 'POST':
+        searched = request.form.get('number','').strip()
+        if searched:
+            result = phone_osint(searched)
+            save_report('phone', searched,
+                        result, {'valid': result['info'].get('valid', False)})
+    return render_template('phone.html', result=result,
+                           searched=searched, active='phone')
+
+# ── Phone API ─────────────────────────────────
+@app.route('/api/v1/phone', methods=['POST'])
+@api_key_required
+def api_phone():
+    data   = request.get_json() or {}
+    number = data.get('number','').strip()
+    if not number:
+        return api_response(error='number field required', status=400)
+    result = phone_osint(number)
+    save_report('phone', number, result)
+    return api_response(result)
 
 if __name__ == '__main__':
     print('\n\033[36m  ╔══════════════════════════════════╗')

@@ -368,6 +368,84 @@ def build_threat_report(story, styles, res):
         if rows:
             story.append(kv_table(rows[:8]))
         story.append(Spacer(1,0.2*cm))
+def build_phone_report(story, styles, res):
+    info = res.get('info', {})
+    conf = res.get('confidence', {})
+    ai   = res.get('ai', {})
+
+    section_title(story, styles,
+        f"Phone Intelligence — Confidence {conf.get('score',0)}%")
+
+    # Confidence bar
+    score = conf.get('score', 0)
+    color = C_GREEN if score >= 70 else C_AMBER if score >= 40 else C_RED
+    story.append(Table([
+        [Paragraph(f"CONFIDENCE: {score}% — {conf.get('level','Unknown')}", ParagraphStyle(
+            'cf', fontName='Helvetica-Bold', fontSize=14, textColor=color))]
+    ], colWidths=[16.5*cm], style=TableStyle([
+        ('BACKGROUND',(0,0),(-1,-1),C_CARD),
+        ('LEFTPADDING',(0,0),(-1,-1),10),
+        ('TOPPADDING',(0,0),(-1,-1),8),
+        ('BOTTOMPADDING',(0,0),(-1,-1),8),
+        ('LINEBELOW',(0,0),(-1,-1),1,color),
+    ])))
+    story.append(Spacer(1, 0.4*cm))
+
+    # Number details
+    rows = [
+        ['E164 Format',    info.get('e164','—')],
+        ['International',  info.get('formatted','—')],
+        ['Country',        f"{info.get('country_name','—')} ({info.get('country_iso','')})"],
+        ['Region',         info.get('region','—')],
+        ['Carrier',        info.get('carrier','—')],
+        ['Line Type',      info.get('line_type','—')],
+        ['Timezones',      ', '.join(info.get('timezones', []))],
+        ['Scan Time',      f"{res.get('scan_time',0)}s"],
+    ]
+    story.append(kv_table(rows))
+    story.append(Spacer(1, 0.4*cm))
+
+    # AI Summary
+    if ai.get('summary'):
+        section_title(story, styles, 'AI Analysis', '◈')
+        story.append(Paragraph(ai['summary'], styles['body']))
+        story.append(Spacer(1, 0.3*cm))
+        if ai.get('observations'):
+            for obs in ai['observations']:
+                story.append(Paragraph(f'• {obs}', styles['body']))
+
+    # Names
+    names = res.get('names', [])
+    if names:
+        story.append(Spacer(1, 0.4*cm))
+        section_title(story, styles, f'Possible Names ({len(names)})', '👤')
+        rows = [['Name', 'Source']]
+        for name in names:
+            rows.append([name, 'Web Search'])
+        story.append(Table(rows, colWidths=[8*cm, 8.5*cm],
+                           style=header_table_style()))
+
+    # Web hits
+    hits = res.get('web_hits', [])
+    if hits:
+        story.append(Spacer(1, 0.4*cm))
+        section_title(story, styles, f'Web Results ({len(hits)})', '🌐')
+        rows = [['Title', 'Engine', 'URL']]
+        for h in hits[:8]:
+            rows.append([
+                h.get('title','')[:40],
+                h.get('engine',''),
+                h.get('url','')[:50]
+            ])
+        story.append(Table(rows, colWidths=[6*cm, 2.5*cm, 8*cm],
+                           style=header_table_style()))
+
+    # Next steps
+    if ai.get('next_steps'):
+        story.append(Spacer(1, 0.4*cm))
+        section_title(story, styles, 'Recommended Next Steps', '→')
+        for step in ai['next_steps']:
+            story.append(Paragraph(f'→  {step}', styles['body']))
 
 def build_analyze_report(story, styles, res, threat=None):
     if res.get('ip_info') and res['ip_info'].get('status')=='success':
@@ -438,6 +516,9 @@ def generate_pdf(report):
                 story.append(Paragraph(rtype_dns, styles['label']))
                 story.append(Paragraph('\n'.join(vals), styles['mono']))
                 story.append(Spacer(1,0.2*cm))
+elif rtype == 'phone':
+        build_phone_report(story, styles, results)
+
     else:
         section_title(story, styles, 'Raw Data')
         import json
