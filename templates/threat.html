@@ -13,6 +13,7 @@
     <i class="fas fa-crosshairs" style="color:var(--red);"></i> &nbsp;Target
   </div>
   <form method="POST" data-loading="QUERYING THREAT DATABASES...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="target"
              placeholder="e.g.  8.8.8.8  or  example.com"
