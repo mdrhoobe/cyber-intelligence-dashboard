@@ -86,3 +86,7 @@ tests/                 Offline regression checks
 Built and maintained as a cybersecurity learning and portfolio project by Mohammed Salih.
 
 For evaluation design, assumptions, and provider-failure interpretation, see [METHODOLOGY.md](METHODOLOGY.md).
+
+## Release status
+
+Candidate version: **0.9.0** (research prototype). The internal REST API keeps its own `v1` endpoint convention; it is not a claim that this prototype is production-ready. The current branch is undergoing review and should not be presented as a verified security assessment service.

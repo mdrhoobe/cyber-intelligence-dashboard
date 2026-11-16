@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, m
 from functools import wraps
 import requests, socket, time, json, io, re, os, hmac, secrets
 from target_validation import validate_public_target, TargetValidationError
+from version import APP_VERSION
 from db import (init_db, save_report, get_all_reports,
                 get_recent_reports, count_reports,
                 clear_reports, get_stats_data, search_reports)
@@ -35,7 +36,7 @@ def inject_csrf_token():
         if '_csrf_token' not in session:
             session['_csrf_token'] = secrets.token_urlsafe(32)
         return session['_csrf_token']
-    return {'csrf_token': csrf_token}
+    return {'csrf_token': csrf_token, 'app_version': APP_VERSION}
 
 
 @app.before_request
@@ -1299,7 +1300,7 @@ def api_phone():
 if __name__ == '__main__':
     print('\n\033[36m  ╔══════════════════════════════════╗')
     print('  ║  CYBER INTELLIGENCE DASHBOARD   ║')
-    print('  ║  Mohammed Drhoobe  ·  v3.0.0       ║')
+    print(f'  ║  Mohammed Drhoobe  ·  v{APP_VERSION}       ║')
     print('  ╚══════════════════════════════════╝\033[0m')
     print('\033[32m  ✓  http://127.0.0.1:5000\033[0m\n')
     app.run(debug=False, host=os.environ.get('CID_HOST', '127.0.0.1'), port=int(os.environ.get('CID_PORT', '5000')))

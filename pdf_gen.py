@@ -15,6 +15,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from datetime import datetime
 import io
 from xml.sax.saxutils import escape
+from version import APP_VERSION
 
 # ── Colors ────────────────────────────────────────────────
 C_BG      = colors.HexColor('#050a05')
@@ -116,7 +117,7 @@ def build_header(story, styles, report):
             Paragraph('⬡  CYBER INTELLIGENCE DASHBOARD', ParagraphStyle(
                 'logo', fontName='Helvetica-Bold', fontSize=13,
                 textColor=C_GREEN)),
-            Paragraph('CLASSIFIED // EDUCATIONAL USE ONLY', ParagraphStyle(
+            Paragraph('RESEARCH DEMONSTRATION // NOT VERIFIED', ParagraphStyle(
                 'cls', fontName='Helvetica-Bold', fontSize=8,
                 textColor=C_RED, alignment=TA_RIGHT)),
         ]],
@@ -147,7 +148,7 @@ def build_footer(canvas, doc):
     canvas.setFillColor(C_DIM)
     canvas.setFont('Helvetica', 7)
     canvas.drawString(2*cm, 1.2*cm,
-        f"CID v8.0 — Mohammed Saleh — Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} — Educational Use Only")
+        f"CID v{APP_VERSION} — Mohammed Saleh — Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} — Educational Use Only")
     canvas.drawRightString(19*cm, 1.2*cm, f"Page {doc.page}")
     canvas.setStrokeColor(C_BORDER)
     canvas.setLineWidth(0.3)
