@@ -4,7 +4,7 @@ from phonenumbers import (
     PhoneNumberType, number_type,
     is_valid_number, parse as pn_parse
 )
-import requests, re, time, json, socket
+import requests, re, time, json, socket, os
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -85,8 +85,7 @@ def parse_phone(raw):
         result['line_type']   = NUM_TYPES.get(number_type(pn), 'Unknown')
         result['timezones']   = list(timezone.time_zones_for_number(pn))
         iso = result['country_iso']
-        result['coords']      = COUNTRY_COORDS.get(iso,
-            {'lat': 25.0, 'lon': 45.0, 'name': result['country_name']})
+        result['coords']      = COUNTRY_COORDS.get(iso)
     except Exception as e:
         result['error'] = str(e)
     return result
@@ -185,10 +184,13 @@ def extract_emails_from_hits(hits):
 
 def check_hibp(email):
     """HaveIBeenPwned — checks if email appeared in data breaches"""
+    key = os.environ.get('HIBP_API_KEY', '')
+    if not key:
+        return {'email': email, 'breached': None, 'error': 'HIBP API key not configured'}
     try:
         r = requests.get(
             f'https://haveibeenpwned.com/api/v3/breachedaccount/{email}',
-            headers={**HEADERS, 'hibp-api-key': '', 'User-Agent': 'CID-OSINT/1.0'},
+            headers={**HEADERS, 'hibp-api-key': key, 'User-Agent': 'CID-OSINT/1.0'},
             timeout=8
         )
         if r.status_code == 200:
@@ -286,6 +288,9 @@ def extract_names(hits):
 # 8. AI CORRELATION (Claude API)
 # ════════════════════════════════════════════════
 def ai_correlate(phone_data):
+    key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not key:
+        return manual_confidence(phone_data)
     try:
         summary = {
             'number':     phone_data['info'].get('formatted'),
@@ -323,9 +328,10 @@ Respond in this exact JSON format only:
 
         r = requests.post(
             'https://api.anthropic.com/v1/messages',
-            headers={'Content-Type': 'application/json'},
+            headers={'Content-Type': 'application/json',
+                     'x-api-key': key, 'anthropic-version': '2023-06-01'},
             json={
-                'model':      'claude-sonnet-4-6',
+                'model':      os.environ.get('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
                 'max_tokens': 1000,
                 'messages':   [{'role': 'user', 'content': prompt}],
             },
@@ -358,7 +364,7 @@ def manual_confidence(data):
     if any(e.get('breached') for e in data.get('hibp_results',[])):
         score += 10; obs.append('Email found in data breach')
 
-    risk = 'High' if score >= 70 else 'Medium' if score >= 40 else 'Low'
+    risk = 'Unassessed'
 
     return {
         'summary':           f"Phone number from {info.get('country_name','unknown')} "
@@ -502,37 +508,14 @@ def phone_osint(raw_number):
     # 10. Confidence
     result['confidence'] = calculate_confidence(result, result['ai'])
 
-    # 11. Map nodes
-    nodes = []
+    # Country centroid only: a phone number does not establish a device location.
     if info.get('coords'):
-        nodes.append({
-            'type':'phone','label':formatted,
-            'sub': f"{info['country_name']} — {info['carrier']}",
-            'lat':info['coords']['lat'],'lon':info['coords']['lon'],
-            'color':'#39d353','icon':'📞','size':16,
-        })
-    if info.get('carrier') and info['carrier'] != 'Unknown':
-        nodes.append({
-            'type':'carrier','label':info['carrier'],
-            'sub':'Mobile Carrier',
-            'lat':info['coords']['lat']+2,'lon':info['coords']['lon']+2,
-            'color':'#e8a020','icon':'📡','size':12,
-        })
-    for i, name in enumerate(result['names'][:4]):
-        nodes.append({
-            'type':'name','label':name,'sub':'Possible Owner',
-            'lat':info['coords']['lat']+(i*3)-3,
-            'lon':info['coords']['lon']-(i*4),
-            'color':'#7c4dba','icon':'👤','size':10,
-        })
-    for i, email in enumerate(result['emails'][:2]):
-        nodes.append({
-            'type':'email','label':email,'sub':'Extracted Email',
-            'lat':info['coords']['lat']-3-(i*2),
-            'lon':info['coords']['lon']+(i*3),
-            'color':'#cc2936','icon':'✉️','size':10,
-        })
-    result['map_nodes'] = nodes
+        result['map_nodes'] = [{
+            'type': 'country', 'label': info.get('country_name') or 'Country',
+            'sub': 'Approximate country-level reference, not phone location',
+            'lat': info['coords']['lat'], 'lon': info['coords']['lon'],
+            'color': '#39d353', 'icon': '🌍', 'size': 12,
+        }]
 
     result['scan_time'] = round(time.time() - start, 1)
     return result

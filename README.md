@@ -1,113 +1,86 @@
 # Cyber Intelligence Dashboard
 
-A web-based OSINT platform I built while learning Python, Flask, and cybersecurity. Started as a simple username checker, grew into a 15-tool intelligence suite.
+A Flask application for learning practical OSINT and network security assessment. I built it to connect small investigation utilities to one reporting interface and to understand the reliability problems that occur when different sources disagree or fail.
 
----
+This is an **educational prototype**, not a penetration-testing service, identity verification system, or validated threat classifier.
 
-## What it does
+## Main components
 
-**Target Analyzer** is the main module — enter any IP or domain and it runs 6 scans simultaneously: geolocation, DNS, port scan, WHOIS, security headers, and HTTP/SSL analysis. Results come back in one tabbed report with a threat score.
+- Domain and IP reconnaissance: DNS, WHOIS, HTTP response, TLS certificate inspection and technology hints
+- Network inspection: a small TCP port list and HTTP security-header presence checks
+- Public-source investigation: username checks, public search references and optional reputation services
+- Local reports: SQLite history, statistics, PDF export and an interactive network map
+- Flask REST API: selected tools available through authenticated JSON endpoints
+- Scheduled scans: interval jobs stored in SQLite
 
-| Module | Description |
-|---|---|
-| Target Analyzer | All-in-one: IP, DNS, Ports, WHOIS, Headers, SSL |
-| Username Scan | Checks 16 platforms simultaneously |
-| Bulk Scan | Multiple usernames and domains at once |
-| Email Checker | Format, MX records, provider, disposable detection |
-| Domain Analyzer | HTTP/HTTPS status, SSL, server headers |
-| IP Lookup | Geolocation, ISP, proxy/VPN detection |
-| DNS Lookup | A, AAAA, MX, NS, TXT, SOA, CAA records |
-| Port Scanner | 16 common ports with service detection |
-| Security Headers | A-F grade, CSP, HSTS, X-Frame-Options |
-| SSL Inspector | Certificate details, expiry countdown, SANs |
-| Subdomain Scanner | DNS-based discovery against 50 common names |
-| Tech Fingerprint | Server, CMS, CDN, Analytics, Framework detection |
-| WHOIS Lookup | Registrar, dates, nameservers |
-| Hash Tools | MD5, SHA-1, SHA-256, SHA-512, SHA3-256 |
-| URL Analyzer | Parse, redirect tracking, encode/decode |
+The phone module can show country-level numbering information and public search references. **It cannot locate a phone or verify the identity of its owner.** Some integrations require credentials, may be rate-limited, or may be unavailable without them.
 
-Everything saves automatically to SQLite and can be exported as PDF.
+## Environment and installation
 
----
+Python 3.11 or later is recommended. Create and activate a virtual environment, then run:
 
-## Stack
+```bash
+python -m pip install -r requirements.txt
+```
 
-Python 3, Flask, SQLite, dnspython, python-whois, ReportLab, Chart.js
+Configure the application password, API key and (optionally) a stable Flask session secret through environment variables. Do not paste real secrets into source code or commit a populated `.env` file.
 
----
+PowerShell example (replace each value with your own long random secret):
 
-## Setup
-git clone https://github.com/mdrhoobe/cyber-intelligence-dashboard.git
-
-cd cyber-intelligence-dashboard
-
-pip install -r requirements.txt
-
+```powershell
+$env:CID_PASSWORD = "replace-with-a-unique-password"
+$env:CID_API_KEY = "replace-with-a-long-random-api-key"
+$env:CID_SECRET_KEY = "replace-with-a-long-random-session-secret"
 python app.py
+```
 
-Open http://127.0.0.1:5000 in your browser.
-Default password: cid2025 (change it in app.py before sharing)
+Open http://127.0.0.1:5000. The dashboard listens on localhost by default; running it on an internet-facing host requires a separate deployment security review.
 
----
+API requests use the `X-API-Key` header. Keys in URL query parameters are not supported.
 
-## Termux (Android)
-pkg install python git
-pip install flask requests python-whois dnspython
-python app.py
+For providers requiring credentials, supported optional environment variables include `ABUSEIPDB_KEY`, `VIRUSTOTAL_KEY`, `OTX_KEY`, `HIBP_API_KEY` and `ANTHROPIC_API_KEY`. Phone summaries use deterministic heuristics if the optional language-model API is not configured. Such summaries are **not independently verified**.
 
----
+## Run tests
 
-## Linux
-pip3 install -r requirements.txt
-python3 app.py
+```bash
+python -m pip install -r requirements-dev.txt
+python -m compileall -q app.py db.py pdf_gen.py phone_osint.py scheduler.py threat.py target_validation.py
+python -m pytest -q
+```
 
----
+Tests in this repository focus on deterministic offline validation. Passing these checks does not establish that all external OSINT providers are reachable or accurate.
+
+## How results should be interpreted
+
+- An HTTP 200 status is not proof a username belongs to someone; many sites return success pages for missing accounts.
+- Open or closed TCP ports represent a point-in-time observation, not a complete vulnerability assessment.
+- Header grades are simple presence-based heuristics. Missing a header alone does not establish exploitation risk.
+- Reputation scores are exploratory rules combining third-party indicators, **not measured probabilities**.
+- A failed or unavailable provider must not be interpreted as a clean result.
+- Phone numbers indicate numbering geography at best; map locations are approximate country centroids, never device positions.
+- External requests and DNS responses can change between runs. Targets must be authorized and publicly routable.
+
+## Responsible use
+
+Only investigate domains, IPs and accounts you own or have permission to assess. The application blocks common private and loopback network targets, but DNS rebinding and unusual environments remain possible; do not expose it to untrusted users. Store reports locally and avoid collecting or publishing third-party personal information without a legitimate basis.
+
+## Current limitations and next work
+
+The project still needs broader integration tests, rate limits, clearer separation of server and UI modules, improved source provenance, and an experimental evaluation of false-positive/false-negative rates. A future study could compare provider disagreements and reproduce findings against a curated set of authorized test targets.
 
 ## Project structure
-cid/
-├── app.py          main Flask backend
-├── db.py           SQLite database layer
-├── templates/      HTML templates (20 files)
-├── static/
-│   ├── css/        dark theme stylesheet
-│   └── js/         clock, loading, sidebar
-├── reports/        SQLite DB stored here
-└── requirements.txt
 
----
+```text
+app.py                 Flask routes and scan orchestration
+db.py                  SQLite report storage
+phone_osint.py         Phone metadata and optional public-source collection
+threat.py              External reputation-source adapters
+scheduler.py           Scheduled jobs
+pdf_gen.py             PDF rendering
+target_validation.py   Public-target filter
+templates/             Jinja HTML pages
+static/                CSS and client JavaScript
+tests/                 Offline regression checks
+```
 
-## Known issues
-
-- Some platforms return 200 for non-existent usernames. Treat results as leads, not confirmed facts.
-- Port scanner uses a short timeout for speed. Results may vary on slow connections.
-- WHOIS data depends on registrar privacy settings.
-- Tech fingerprinting is heuristic-based, not exhaustive.
-
----
-
-## Roadmap
-
-- [x] Username scanner across 16 platforms
-- [x] Domain analyzer with SSL and headers
-- [x] SQLite database with search and filter
-- [x] Statistics page with charts
-- [x] IP lookup, DNS, ports, security headers
-- [x] SSL inspector, subdomain scanner, tech fingerprint
-- [x] Target Analyzer combining all tools
-- [x] Hash tools and URL analyzer
-- [x] PDF export, dark/light mode, login system
-- [ ] REST API endpoints
-- [ ] Threat intelligence feed integration
-- [ ] Scheduled and automated scans
-
----
-
-## Disclaimer
-
-Educational and research purposes only.
-Only scan targets you have explicit permission to investigate.
-Port scanning without authorization may be illegal in your jurisdiction.
-
----
-
-Built by Mohammed Salih — learning cybersecurity and OSINT.
+Built and maintained as a cybersecurity learning and portfolio project by Mohammed Salih.

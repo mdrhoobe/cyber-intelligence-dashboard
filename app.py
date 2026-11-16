@@ -29,6 +29,15 @@ def login_required(f):
     return decorated
 
 
+@app.context_processor
+def inject_csrf_token():
+    def csrf_token():
+        if '_csrf_token' not in session:
+            session['_csrf_token'] = secrets.token_urlsafe(32)
+        return session['_csrf_token']
+    return {'csrf_token': csrf_token}
+
+
 @app.before_request
 def validate_scan_targets():
     if request.method != 'POST':
@@ -37,8 +46,13 @@ def validate_scan_targets():
         key = request.headers.get('X-API-Key', '')
         if not API_KEY or not hmac.compare_digest(key, API_KEY):
             return jsonify({'success': False, 'error': 'Invalid or missing API key'}), 401
-    elif request.endpoint not in ('login',) and not session.get('logged_in'):
-        return redirect(url_for('login'))
+    else:
+        expected = session.get('_csrf_token', '')
+        supplied = request.form.get('csrf_token', '')
+        if not expected or not hmac.compare_digest(expected, supplied):
+            abort(400, 'Invalid form security token')
+        if request.endpoint != 'login' and not session.get('logged_in'):
+            return redirect(url_for('login'))
 
     if request.endpoint == 'bulk':
         domains = [item.strip() for item in request.form.get('domains', '').splitlines() if item.strip()]
@@ -330,7 +344,8 @@ def universal_analyze(target):
 
     result = {'target':original,'clean':clean,'is_ip':is_ip,
               'ip_info':None,'dns':None,'ports':None,
-              'whois':None,'headers':None,'domain_info':None}
+              'whois':None,'headers':None,'domain_info':None,
+              'ssl':None,'tech':None}
 
     def _ip():
         ip = clean if is_ip else None
@@ -346,6 +361,8 @@ def universal_analyze(target):
         'whois':       lambda: get_whois(clean)     if not is_ip else None,
         'headers':     lambda: check_headers(url_t),
         'domain_info': lambda: check_domain(clean)  if not is_ip else None,
+        'ssl':         lambda: ssl_inspect(clean) if not is_ip else None,
+        'tech':        lambda: tech_fingerprint(url_t) if not is_ip else None,
     }
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
@@ -1050,16 +1067,6 @@ def api_analyze():
         return api_response(error='target field required', status=400)
     result = universal_analyze(target)
     threat = calculate_threat_score(result)
-    if not result.get('is_ip'):
-        import concurrent.futures
-        clean = result.get('clean','')
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-            f_ssl  = ex.submit(ssl_inspect, clean)
-            f_tech = ex.submit(tech_fingerprint, f'https://{clean}')
-            try:    result['ssl']  = f_ssl.result(timeout=10)
-            except: result['ssl']  = None
-            try:    result['tech'] = f_tech.result(timeout=10)
-            except: result['tech'] = None
     save_report('analyze', target, result)
     return api_response({
         'target':  target,

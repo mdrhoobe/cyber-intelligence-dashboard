@@ -26,6 +26,8 @@ def check_abuseipdb(ip):
             params={'ipAddress': ip, 'maxAgeInDays': 90},
             timeout=TIMEOUT
         )
+        if r.status_code != 200:
+            return {'available': False, 'reason': f'HTTP {r.status_code}'}
         d = r.json().get('data', {})
         return {
             'available':       True,
@@ -167,7 +169,9 @@ def full_threat_report(target):
     elif risk_score >= 40: level, color = 'High Risk',  'red'
     elif risk_score >= 20: level, color = 'Medium Risk','amber'
     elif risk_score > 0:   level, color = 'Low Risk',   'amber'
-    else:                  level, color = 'Clean',       'green'
+    elif not any(s.get('available') for s in report['sources'].values()):
+        level, color = 'Insufficient Data', 'amber'
+    else:                  level, color = 'No Reported Indicators', 'green'
 
     report['summary'] = {
         'risk_score': risk_score,
