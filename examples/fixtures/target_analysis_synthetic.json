@@ -1,0 +1,76 @@
+{
+  "dataset": "synthetic-educational-fixture-v1",
+  "description": "Invented demonstration data. No request was made to the example target or address.",
+  "checked_at_utc": "2026-11-16T12:00:00Z",
+  "result": {
+    "target": "demo.example",
+    "clean": "demo.example",
+    "is_ip": false,
+    "ip_info": {
+      "status": "success",
+      "query": "198.51.100.19",
+      "country": "Exampleland",
+      "proxy": false,
+      "hosting": false
+    },
+    "dns": {
+      "domain": "demo.example",
+      "records": {
+        "A": [
+          "198.51.100.19"
+        ]
+      },
+      "has_any": true,
+      "error": null
+    },
+    "ports": {
+      "host": "demo.example",
+      "ip": "198.51.100.19",
+      "error": null,
+      "ports": [
+        {
+          "port": 23,
+          "service": "Telnet",
+          "status": "open"
+        },
+        {
+          "port": 443,
+          "service": "HTTPS",
+          "status": "open"
+        }
+      ],
+      "open": 2
+    },
+    "whois": {
+      "domain": "demo.example",
+      "registrar": "Synthetic Registrar",
+      "error": null
+    },
+    "headers": {
+      "score": 50,
+      "grade": "C",
+      "found": {},
+      "missing": [],
+      "server": "Hidden",
+      "error": null
+    },
+    "domain_info": {
+      "domain": "demo.example",
+      "reachable": true,
+      "https_status": 200,
+      "http_status": null,
+      "ssl": true,
+      "error": null
+    },
+    "ssl": {
+      "domain": "demo.example",
+      "expired": false,
+      "soon": false,
+      "days_left": 90,
+      "error": null
+    },
+    "tech": {
+      "server": "Example Server"
+    }
+  }
+}

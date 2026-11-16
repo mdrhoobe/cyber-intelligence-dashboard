@@ -13,3 +13,4 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m compileall -q app.py db.py pdf_gen.py phone_osint.py scheduler.py threat.py target_validation.py
       - run: python -m pytest -q
+      - run: python -m scripts.offline_demo

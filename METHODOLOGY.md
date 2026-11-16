@@ -44,3 +44,7 @@ Use authorized test domains with known configurations. Keep timestamps and sanit
 ## Source availability in saved analyses
 
 All-in-one reports attach eight per-source statuses and one UTC collection timestamp. `observed` means an adapter returned usable data, not that the underlying claim was independently verified. `no_data` describes an available adapter without relevant data, `unavailable` records failures, and `not_applicable` denotes a module not used for this target category. These statuses must not be conflated with threat indicators.
+
+## Synthetic demonstration
+
+A version-controlled fixture and deterministic command (`python -m scripts.offline_demo`) produce an exposure assessment and evidence ledger entirely offline. All values are invented and explicitly marked `synthetic`. This exercise tests the implementation and how results are represented, but cannot establish how accurately a real scanner detects problems.

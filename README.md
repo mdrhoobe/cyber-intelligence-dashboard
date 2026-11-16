@@ -100,3 +100,7 @@ The scheduled scan worker starts only when the application is launched using `py
 ## Evidence ledger
 
 Each all-in-one target analysis now stores an `evidence` ledger with source labels, a UTC collection timestamp, and one of `observed`, `no_data`, `unavailable` or `not_applicable`. These labels describe **source availability only**; they do not verify the truth of a returned finding. The same ledger is returned by the analysis API and displayed in the browser.
+
+## Demonstration without network access
+
+Run `python -m scripts.offline_demo` to reproduce a fully synthetic, timestamped sample analysis. Its input is `examples/fixtures/target_analysis_synthetic.json`, and the output clearly marks observations as fictional. See [examples/README.md](examples/README.md). This is useful for explaining how the dashboard works without scanning real systems.
