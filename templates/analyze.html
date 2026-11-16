@@ -14,6 +14,7 @@
     <i class="fas fa-crosshairs" style="color:var(--cyan);"></i> &nbsp;Target
   </div>
   <form method="POST" data-loading="RUNNING ALL MODULES...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="target"
              placeholder="e.g.  github.com  or  8.8.8.8"

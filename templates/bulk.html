@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom:24px;">
   <div class="card-label"><i class="fas fa-layer-group" style="color:var(--cyan);"></i> &nbsp;Scan Targets</div>
   <form method="POST" data-loading="SCANNING BULK TARGETS...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
       
