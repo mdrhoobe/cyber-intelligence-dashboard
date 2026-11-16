@@ -12,7 +12,7 @@ def empty_analysis():
     return {
         "target": "8.8.8.8", "clean": "8.8.8.8", "is_ip": True,
         "ip_info": {"status": "fail", "message": "offline"},
-        "dns": None, "ports": {"error": "offline", "ports": []},
+        "dns": None, "ports": {"error": "offline", "ports": [], "open": 0},
         "whois": None, "headers": {"error": "offline", "score": None},
         "domain_info": None, "ssl": {"error": "offline"}, "tech": None,
     }
