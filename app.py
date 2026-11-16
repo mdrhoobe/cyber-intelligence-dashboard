@@ -154,7 +154,7 @@ def check_domain(raw):
         info.update({'https_status':r.status_code,'response_time':round((time.time()-t0)*1000),
                      'reachable':True,'ssl':True,'server':r.headers.get('Server','Unknown'),
                      'content_type':r.headers.get('Content-Type','Unknown').split(';')[0],
-                     'redirect':r.url if r.url!=f'https://{domain}' else None})
+                     'redirect':r.headers.get('Location') if r.is_redirect else None})
     except requests.exceptions.SSLError:
         info['https_status'] = 'SSL Error'
     except:
@@ -333,7 +333,7 @@ def check_headers(url):
             'score':score,'grade':grade,'server':server,'powered':powered,'error':None
         }
     except Exception as e:
-        return {'url':url,'error':str(e),'found':{},'missing':[],'score':0,'grade':'F'}
+        return {'url':url,'error':str(e),'found':{},'missing':[],'score':None,'grade':'N/A'}
 # ── Universal Target Analyzer ─────────────────────────────
 def universal_analyze(target):
     import concurrent.futures, re
@@ -450,7 +450,7 @@ def ssl_inspect(domain):
             'error':     None
         }
     except ssl_lib.SSLCertVerificationError as e:
-        return {'domain':domain,'error':f'Cert verification failed: {e}','expired':True}
+        return {'domain':domain,'error':f'Cert verification failed: {e}','expired':False,'verification_error':True}
     except Exception as e:
         return {'domain':domain,'error':str(e),'expired':False}
 
@@ -580,7 +580,7 @@ def calculate_threat_score(result):
             score += 20
             flags.append({'msg':f"Exposed service: {risky[p['port']]} (:{p['port']})","sev":'high'})
 
-    hs = heads.get('score')
+    hs = heads.get('score') if not heads.get('error') else None
     if hs is not None:
         if hs < 40:
             score += 20
@@ -589,7 +589,10 @@ def calculate_threat_score(result):
             score += 10
             flags.append({'msg':f'Poor security headers: {hs}%','sev':'medium'})
 
-    if ssl_r.get('expired'):
+    if ssl_r.get('verification_error'):
+        score += 20
+        flags.append({'msg':'TLS certificate verification failed','sev':'high'})
+    elif ssl_r.get('expired'):
         score += 20
         flags.append({'msg':'SSL certificate is expired','sev':'high'})
     elif ssl_r.get('soon'):
@@ -602,13 +605,22 @@ def calculate_threat_score(result):
         flags.append({'msg':f'Server version exposed: {sv}','sev':'low'})
 
     score = min(score, 100)
+    observed = []
+    if ip.get('status') == 'success': observed.append('ip_geolocation')
+    if ports and not ports.get('error'): observed.append('tcp_ports')
+    if heads and not heads.get('error'): observed.append('http_headers')
+    if ssl_r and not ssl_r.get('error'): observed.append('tls_certificate')
+
     if score >= 70:   lvl,clr = 'Critical','red'
     elif score >= 50: lvl,clr = 'High Risk','red'
     elif score >= 30: lvl,clr = 'Medium Risk','amber'
-    elif score >= 10: lvl,clr = 'Low Risk','green'
-    else:             lvl,clr = 'Clean','green'
+    elif score >= 10: lvl,clr = 'Low Risk','amber'
+    elif not observed: lvl,clr = 'Insufficient Data','amber'
+    else:             lvl,clr = 'No Indicators Observed','green'
 
-    return {'score':score,'level':lvl,'color':clr,'flags':flags}
+    return {'score':score,'level':lvl,'color':clr,'flags':flags,
+            'sources_observed': observed, 'evidence_count': len(observed),
+            'method': 'Exploratory indicators, not a probability of compromise'}
 
 # ── Auth routes ───────────────────────────────────────────
 @app.route('/login', methods=['GET','POST'])
@@ -810,8 +822,14 @@ def analyze():
         searched = request.form.get('target','').strip()
         if searched:
             result = universal_analyze(searched)
-            save_report('analyze', searched, result)
-    return render_template('analyze.html', result=result, searched=searched, active='analyze')
+            assessment = calculate_threat_score(result)
+            save_report('analyze', searched, result, assessment)
+        else:
+            assessment = None
+    else:
+        assessment = None
+    return render_template('analyze.html', result=result, threat=assessment,
+                           searched=searched, active='analyze')
 
 @app.route('/hash-tools', methods=['GET','POST'])
 @login_required
@@ -1067,7 +1085,7 @@ def api_analyze():
         return api_response(error='target field required', status=400)
     result = universal_analyze(target)
     threat = calculate_threat_score(result)
-    save_report('analyze', target, result)
+    save_report('analyze', target, result, threat)
     return api_response({
         'target':  target,
         'result':  result,
