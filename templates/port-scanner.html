@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom:24px;">
   <div class="card-label"><i class="fas fa-plug" style="color:var(--cyan);"></i> &nbsp;Target Host</div>
   <form method="POST" data-loading="SCANNING PORTS...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="host"
              placeholder="e.g. example.com or 192.168.1.1"

@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom:24px;">
   <div class="card-label"><i class="fas fa-shield-alt" style="color:var(--green);"></i> &nbsp;Target URL</div>
   <form method="POST" data-loading="ANALYZING HEADERS...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="url"
              placeholder="e.g. example.com or https://example.com"

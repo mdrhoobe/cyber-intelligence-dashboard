@@ -66,6 +66,7 @@
   </div>
   {% if not query and not rtype %}
   <form method="POST" action="{{ url_for('clear_reports_route') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <button class="btn btn-danger btn-sm" id="clearReports" type="submit">
       <i class="fas fa-trash-alt"></i> Clear All
     </button>

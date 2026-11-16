@@ -14,6 +14,7 @@
     <i class="fas fa-plus-circle" style="color:var(--green);"></i> &nbsp;New Schedule
   </div>
   <form method="POST" action="{{ url_for('scheduler_add') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
 
       <div>
@@ -126,12 +127,14 @@
           <div style="display:flex;gap:6px;">
             <!-- Run Now -->
             <form method="POST" action="{{ url_for('scheduler_run_now', sid=s.id) }}" style="display:inline;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-outline btn-sm" type="submit" title="Run now">
                 <i class="fas fa-play"></i>
               </button>
             </form>
             <!-- Toggle -->
             <form method="POST" action="{{ url_for('scheduler_toggle', sid=s.id) }}" style="display:inline;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-outline btn-sm" type="submit"
                       title="{% if s.active %}Pause{% else %}Resume{% endif %}">
                 <i class="fas fa-{% if s.active %}pause{% else %}play-circle{% endif %}"></i>
@@ -139,6 +142,7 @@
             </form>
             <!-- Delete -->
             <form method="POST" action="{{ url_for('scheduler_delete', sid=s.id) }}" style="display:inline;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-danger btn-sm" type="submit" title="Delete"
                       onclick="return confirm('Delete this schedule?')">
                 <i class="fas fa-trash-alt"></i>
