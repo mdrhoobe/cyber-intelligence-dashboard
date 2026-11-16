@@ -88,7 +88,7 @@
     </div>
     <div style="font-family:var(--font-mono);font-size:9px;letter-spacing:3px;
                 color:var(--text-dim);text-transform:uppercase;margin-top:6px;">
-      Confidence
+      Evidence coverage
     </div>
     <div style="height:4px;background:var(--bg-input);border-radius:0;
                 overflow:hidden;margin:10px 0;">
@@ -101,6 +101,7 @@
                 margin-top:6px;">{{ conf.sources }} sources</div>
     <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);
                 margin-top:4px;">{{ result.scan_time }}s scan</div>
+    <div style="font-size:9px;color:var(--text-dim);margin-top:8px;">Not an identity confidence or risk probability</div>
   </div>
 
   <!-- Summary -->
@@ -112,10 +113,8 @@
       <span class="badge badge-found">VALID</span>
       {% endif %}
       <span class="badge badge-domain">{{ info.line_type }}</span>
-      {% if ai.risk %}
-      <span class="badge badge-{% if ai.risk=='High' %}notfound{% elif ai.risk=='Medium' %}unknown{% else %}found{% endif %}">
-        {{ ai.risk }} Risk
-      </span>
+      {% if ai.risk and ai.risk != 'Unassessed' %}
+      <span class="badge badge-unknown">{{ ai.risk }} (unverified)</span>
       {% endif %}
     </div>
 
@@ -233,10 +232,10 @@
               display:flex;align-items:center;justify-content:space-between;">
     <div class="card-label" style="margin-bottom:0;">
       <i class="fas fa-map-marked-alt" style="color:var(--amber);"></i>
-      &nbsp;Intelligence Map ({{ result.map_nodes|length }} nodes)
+      &nbsp;Country reference map (not device location)
     </div>
     <div style="display:flex;gap:12px;">
-      {% for label,color in [('Phone','green'),('Carrier','amber'),('Name','violet'),('Email','red')] %}
+      {% for label,color in [('Country centroid','green')] %}
       <span style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);
                    display:flex;align-items:center;gap:5px;">
         <span style="width:7px;height:7px;border-radius:50%;

@@ -106,7 +106,7 @@
       <div style="font-family:var(--font-mono);font-size:42px;font-weight:700;color:var(--{{ threat.color }});">
         {{ threat.score }}
       </div>
-      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Threat Score</div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Heuristic exposure score</div>
     </div>
     <div style="flex:1;min-width:200px;">
       <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--{{ threat.color }});margin-bottom:10px;">
@@ -124,7 +124,7 @@
         </span>
         {% endfor %}
         {% if not threat.flags %}
-        <span class="badge badge-found"><i class="fas fa-check-circle"></i> No threats detected</span>
+        <span class="badge badge-unknown"><i class="fas fa-check-circle"></i> No indicators observed; this is not a security guarantee</span>
         {% endif %}
       </div>
     </div>
