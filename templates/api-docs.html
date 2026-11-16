@@ -14,11 +14,11 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <div>
       <div class="ri-label">Header Method</div>
-      <code style="font-size:12px;display:block;padding:10px;margin-top:6px;">X-API-Key: {{ api_key }}</code>
+      <code style="font-size:12px;display:block;padding:10px;margin-top:6px;">X-API-Key: YOUR_API_KEY</code>
     </div>
     <div>
       <div class="ri-label">Query Param Method</div>
-      <code style="font-size:12px;display:block;padding:10px;margin-top:6px;">?api_key={{ api_key }}</code>
+      <code style="font-size:12px;display:block;padding:10px;margin-top:6px;">X-API-Key header required</code>
     </div>
   </div>
 </div>
@@ -82,7 +82,7 @@
     <div style="background:var(--bg-input);border:1px solid var(--border);padding:14px;border-left:2px solid var(--green);">
       <pre style="font-family:var(--font-mono);font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;">curl -X POST http://127.0.0.1:5000/api/v1/username \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: {{ api_key }}" \
+  -H "X-API-Key: YOUR_API_KEY" \
   -d '{"username": "john_doe"}'</pre>
     </div>
   </div>
@@ -91,7 +91,7 @@
     <div style="background:var(--bg-input);border:1px solid var(--border);padding:14px;border-left:2px solid var(--amber);">
       <pre style="font-family:var(--font-mono);font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all;">curl -X POST http://127.0.0.1:5000/api/v1/analyze \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: {{ api_key }}" \
+  -H "X-API-Key: YOUR_API_KEY" \
   -d '{"target": "github.com"}'</pre>
     </div>
   </div>
@@ -101,7 +101,7 @@
       <pre style="font-family:var(--font-mono);font-size:12px;color:var(--text);white-space:pre-wrap;">import requests
 
 API  = "http://127.0.0.1:5000/api/v1"
-KEY  = "{{ api_key }}"
+KEY  = "YOUR_API_KEY"
 HEAD = {"X-API-Key": KEY, "Content-Type": "application/json"}
 
 # IP Lookup

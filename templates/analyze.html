@@ -6,7 +6,7 @@
 <div class="page-hdr">
   <div class="page-eye">◈ Flagship Module</div>
   <h1 class="page-title">Target Analyzer</h1>
-  <p class="page-sub">Enter any IP or domain — 6 modules run simultaneously in one report.</p>
+  <p class="page-sub">Enter a public IP or authorized domain — up to eight evidence sources in one report.</p>
 </div>
 
 <div class="card" style="margin-bottom:24px;border-color:rgba(0,200,255,.25);">
@@ -14,6 +14,7 @@
     <i class="fas fa-crosshairs" style="color:var(--cyan);"></i> &nbsp;Target
   </div>
   <form method="POST" data-loading="RUNNING ALL MODULES...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="target"
              placeholder="e.g.  github.com  or  8.8.8.8"
@@ -38,7 +39,7 @@
   <div class="empty-state">
     <div class="empty-icon"><i class="fas fa-crosshairs"></i></div>
     <div class="empty-title">All-in-one analysis</div>
-    <div class="empty-text">Runs 6 modules simultaneously — results in one comprehensive report.</div>
+    <div class="empty-text">Collects multiple evidence sources and records unavailable results without treating them as clean.</div>
   </div>
 </div>
 
@@ -98,6 +99,51 @@
   </div>
 </div>
 
+{% if result.evidence %}
+<div class="card fade-in" style="margin-bottom:20px;">
+  <div class="card-label"><i class="fas fa-list-check" aria-hidden="true"></i>
+    &nbsp;Source evidence and availability
+  </div>
+  <p class="page-sub" style="margin-bottom:12px;">
+    Observed: {{ result.evidence.counts.observed }} ·
+    No data: {{ result.evidence.counts.no_data }} ·
+    Unavailable: {{ result.evidence.counts.unavailable }} ·
+    Not applicable: {{ result.evidence.counts.not_applicable }}
+  </p>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead><tr>
+        <th scope="col">Module</th><th scope="col">Collection source</th>
+        <th scope="col">Status</th>
+      </tr></thead>
+      <tbody>
+      {% for row in result.evidence.rows %}
+        <tr>
+          <td>{{ row.label }}</td>
+          <td>{{ row.source }}</td>
+          <td>
+            {% if row.status == 'observed' %}
+              <span class="badge badge-found">Observed</span>
+            {% elif row.status == 'no_data' %}
+              <span class="badge badge-unknown">No data</span>
+            {% elif row.status == 'unavailable' %}
+              <span class="badge badge-unknown">Unavailable</span>
+            {% else %}
+              <span class="badge">Not applicable</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="color:var(--text-dim);font-size:11px;margin-top:10px;">
+    Checked (UTC): {{ result.evidence.checked_at_utc }}.
+    Missing evidence is not evidence of safety. Source statuses do not verify individual findings.
+  </p>
+</div>
+{% endif %}
+
 {% if threat %}
 <div class="card fade-in" style="margin-bottom:20px;">
   <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
@@ -105,7 +151,7 @@
       <div style="font-family:var(--font-mono);font-size:42px;font-weight:700;color:var(--{{ threat.color }});">
         {{ threat.score }}
       </div>
-      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Threat Score</div>
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Heuristic exposure score</div>
     </div>
     <div style="flex:1;min-width:200px;">
       <div style="font-family:var(--font-mono);font-size:16px;font-weight:700;color:var(--{{ threat.color }});margin-bottom:10px;">
@@ -123,7 +169,7 @@
         </span>
         {% endfor %}
         {% if not threat.flags %}
-        <span class="badge badge-found"><i class="fas fa-check-circle"></i> No threats detected</span>
+        <span class="badge badge-unknown"><i class="fas fa-check-circle"></i> No indicators observed; this is not a security guarantee</span>
         {% endif %}
       </div>
     </div>

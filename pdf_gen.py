@@ -14,6 +14,8 @@ from reportlab.platypus import (
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from datetime import datetime
 import io
+from xml.sax.saxutils import escape
+from version import APP_VERSION
 
 # ── Colors ────────────────────────────────────────────────
 C_BG      = colors.HexColor('#050a05')
@@ -115,7 +117,7 @@ def build_header(story, styles, report):
             Paragraph('⬡  CYBER INTELLIGENCE DASHBOARD', ParagraphStyle(
                 'logo', fontName='Helvetica-Bold', fontSize=13,
                 textColor=C_GREEN)),
-            Paragraph('CLASSIFIED // EDUCATIONAL USE ONLY', ParagraphStyle(
+            Paragraph('RESEARCH DEMONSTRATION // NOT VERIFIED', ParagraphStyle(
                 'cls', fontName='Helvetica-Bold', fontSize=8,
                 textColor=C_RED, alignment=TA_RIGHT)),
         ]],
@@ -134,9 +136,9 @@ def build_header(story, styles, report):
     # Title
     rtype = report.get('type','').replace('_',' ').upper()
     story.append(Paragraph(f"INVESTIGATION REPORT — {rtype}", styles['title']))
-    story.append(Paragraph(f"Target: {report.get('target','')}  ·  "
+    story.append(Paragraph(f"Target: {escape(str(report.get('target','')))}  ·  "
                            f"ID: #{report.get('id','')}  ·  "
-                           f"{report.get('timestamp','')}", styles['subtitle']))
+                           f"{escape(str(report.get('timestamp','')))}", styles['subtitle']))
     story.append(HRFlowable(width='100%', thickness=0.5,
                              color=C_BORDER, spaceAfter=12))
 
@@ -146,7 +148,7 @@ def build_footer(canvas, doc):
     canvas.setFillColor(C_DIM)
     canvas.setFont('Helvetica', 7)
     canvas.drawString(2*cm, 1.2*cm,
-        f"CID v8.0 — Mohammed Saleh — Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} — Educational Use Only")
+        f"CID v{APP_VERSION} — Mohammed Saleh — Generated {datetime.now().strftime('%Y-%m-%d %H:%M')} — Educational Use Only")
     canvas.drawRightString(19*cm, 1.2*cm, f"Page {doc.page}")
     canvas.setStrokeColor(C_BORDER)
     canvas.setLineWidth(0.3)
@@ -159,12 +161,12 @@ def section_title(story, styles, title, icon='◈'):
 
 def flag_block(story, styles, flags):
     if not flags:
-        story.append(Paragraph('✓  No threats detected', styles['ok']))
+        story.append(Paragraph('✓  No indicators recorded; safety is not established', styles['ok']))
         return
     for flag in flags:
         sev   = flag.get('sev','low')
         color = C_RED if sev=='high' else C_AMBER
-        t = Table([[Paragraph(f"⚠  {flag['msg']}", ParagraphStyle(
+        t = Table([[Paragraph(f"⚠  {escape(str(flag['msg']))}", ParagraphStyle(
             'fl', fontName='Helvetica', fontSize=8, textColor=color))]],
             colWidths=[16.5*cm])
         t.setStyle(TableStyle([
@@ -351,7 +353,7 @@ def build_ssl_report(story, styles, res):
     if res.get('san'):
         story.append(Spacer(1,0.3*cm))
         story.append(Paragraph('Subject Alternative Names:', styles['label']))
-        story.append(Paragraph('  ·  '.join(res['san'][:8]), styles['mono']))
+        story.append(Paragraph(escape('  ·  '.join(res['san'][:8])), styles['mono']))
 
 def build_threat_report(story, styles, res):
     summary = res.get('summary',{})
@@ -374,13 +376,13 @@ def build_phone_report(story, styles, res):
     ai   = res.get('ai', {})
 
     section_title(story, styles,
-        f"Phone Intelligence — Confidence {conf.get('score',0)}%")
+        f"Phone Intelligence — Evidence coverage {conf.get('score',0)}%")
 
     # Confidence bar
     score = conf.get('score', 0)
     color = C_GREEN if score >= 70 else C_AMBER if score >= 40 else C_RED
     story.append(Table([
-        [Paragraph(f"CONFIDENCE: {score}% — {conf.get('level','Unknown')}", ParagraphStyle(
+        [Paragraph(f"EVIDENCE COVERAGE: {score}% — {conf.get('level','Unknown')}", ParagraphStyle(
             'cf', fontName='Helvetica-Bold', fontSize=14, textColor=color))]
     ], colWidths=[16.5*cm], style=TableStyle([
         ('BACKGROUND',(0,0),(-1,-1),C_CARD),
@@ -407,12 +409,12 @@ def build_phone_report(story, styles, res):
 
     # AI Summary
     if ai.get('summary'):
-        section_title(story, styles, 'AI Analysis', '◈')
-        story.append(Paragraph(ai['summary'], styles['body']))
+        section_title(story, styles, 'Evidence Summary' if ai.get('method') == 'rules' else 'Assisted Evidence Summary', '◈')
+        story.append(Paragraph(escape(str(ai['summary'])), styles['body']))
         story.append(Spacer(1, 0.3*cm))
         if ai.get('observations'):
             for obs in ai['observations']:
-                story.append(Paragraph(f'• {obs}', styles['body']))
+                story.append(Paragraph(f'• {escape(str(obs))}', styles['body']))
 
     # Names
     names = res.get('names', [])
@@ -445,7 +447,7 @@ def build_phone_report(story, styles, res):
         story.append(Spacer(1, 0.4*cm))
         section_title(story, styles, 'Recommended Next Steps', '→')
         for step in ai['next_steps']:
-            story.append(Paragraph(f'→  {step}', styles['body']))
+            story.append(Paragraph(f'→  {escape(str(step))}', styles['body']))
 
 def build_analyze_report(story, styles, res, threat=None):
     if res.get('ip_info') and res['ip_info'].get('status')=='success':
@@ -503,7 +505,7 @@ def generate_pdf(report):
     elif rtype == 'threat':
         build_threat_report(story, styles, results)
     elif rtype == 'analyze':
-        build_analyze_report(story, styles, results)
+        build_analyze_report(story, styles, results, summary)
     elif rtype == 'whois':
         section_title(story, styles, 'WHOIS Data')
         rows = [[k.replace('_',' ').title(), str(v) if not isinstance(v,list) else ', '.join(v[:3])]
@@ -516,7 +518,7 @@ def generate_pdf(report):
                 story.append(Paragraph(rtype_dns, styles['label']))
                 story.append(Paragraph('\n'.join(vals), styles['mono']))
                 story.append(Spacer(1,0.2*cm))
-elif rtype == 'phone':
+    elif rtype == 'phone':
         build_phone_report(story, styles, results)
 
     else:

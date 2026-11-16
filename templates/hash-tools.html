@@ -14,6 +14,7 @@
   <div class="card">
     <div class="card-label"><i class="fas fa-hashtag" style="color:var(--cyan);"></i> &nbsp;Generate Hashes</div>
     <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="generate"/>
       <div class="form-row">
         <label class="form-label">Input Text</label>
@@ -29,6 +30,7 @@
   <div class="card">
     <div class="card-label"><i class="fas fa-search" style="color:var(--violet);"></i> &nbsp;Detect Hash Type</div>
     <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <input type="hidden" name="action" value="detect"/>
       <div class="form-row">
         <label class="form-label">Hash String</label>

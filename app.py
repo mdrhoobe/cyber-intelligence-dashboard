@@ -1,22 +1,30 @@
-from flask import Flask, render_template, request, redirect, url_for, session, make_response
+from flask import Flask, render_template, request, redirect, url_for, session, make_response, abort, jsonify
 from functools import wraps
-import requests, socket, time, json, io, re
+import requests, socket, time, json, io, re, os, hmac, secrets
+from target_validation import validate_public_target, TargetValidationError
+from version import APP_VERSION
+from auth_controls import LoginThrottle
+from evidence_ledger import build_evidence_ledger
+from datetime import timedelta
 from db import (init_db, save_report, get_all_reports,
                 get_recent_reports, count_reports,
                 clear_reports, get_stats_data, search_reports)
 from threat import full_threat_report
 app = Flask(__name__)
-app.secret_key = 'ms-secret-2026-xyz'
+app.secret_key = os.environ.get('CID_SECRET_KEY') or secrets.token_hex(32)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
+                  PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+                  MAX_CONTENT_LENGTH=32768)
 init_db()
 from scheduler import (
     start_scheduler, get_all_schedules, get_schedule,
     create_schedule, add_job, remove_job,
     delete_schedule_db, toggle_schedule_db
 )
-start_scheduler()
+login_throttle = LoginThrottle(max_attempts=5, window_seconds=300)
 
 from phone_osint import phone_osint
-PASSWORD = 'cid2025'
+PASSWORD = os.environ.get('CID_PASSWORD')
 
 def login_required(f):
     @wraps(f)
@@ -25,6 +33,74 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
+
+
+@app.after_request
+def set_security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('Referrer-Policy', 'no-referrer')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    if request.endpoint != 'static':
+        response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@app.context_processor
+def inject_csrf_token():
+    def csrf_token():
+        if '_csrf_token' not in session:
+            session['_csrf_token'] = secrets.token_urlsafe(32)
+        return session['_csrf_token']
+    return {'csrf_token': csrf_token, 'app_version': APP_VERSION}
+
+
+@app.before_request
+def validate_scan_targets():
+    if request.method != 'POST':
+        return
+    if request.path.startswith('/api/v1/'):
+        key = request.headers.get('X-API-Key', '')
+        if not API_KEY or not hmac.compare_digest(key, API_KEY):
+            return jsonify({'success': False, 'error': 'Invalid or missing API key'}), 401
+    else:
+        expected = session.get('_csrf_token', '')
+        supplied = request.form.get('csrf_token', '')
+        if not expected or not hmac.compare_digest(expected, supplied):
+            abort(400, 'Invalid form security token')
+        if request.endpoint != 'login' and not session.get('logged_in'):
+            return redirect(url_for('login'))
+
+    if request.endpoint == 'bulk':
+        domains = [item.strip() for item in request.form.get('domains', '').splitlines() if item.strip()]
+        usernames = [item.strip() for item in request.form.get('usernames', '').splitlines() if item.strip()]
+        if len(domains) > 10 or len(usernames) > 10:
+            abort(400, 'Limit bulk scans to 10 of each target type')
+        targets = domains
+    elif request.endpoint == 'scheduler_add':
+        targets = [] if request.form.get('scan_type') == 'username' else [request.form.get('target', '')]
+    else:
+        endpoints = {
+            'domain', 'ip_lookup', 'dns_lookup_route', 'port_scanner',
+            'headers_check', 'whois_lookup', 'ssl_inspector',
+            'subdomain_finder', 'tech_detect', 'url_analyzer', 'analyze',
+            'threat_intel', 'api_domain', 'api_ip', 'api_dns', 'api_ports',
+            'api_headers', 'api_whois', 'api_ssl', 'api_url', 'api_analyze',
+            'api_threat'
+        }
+        if request.endpoint not in endpoints:
+            return
+        payload = request.get_json(silent=True) if request.is_json else request.form
+        if not hasattr(payload, 'get'):
+            abort(400, 'Expected a JSON object')
+        targets = [next((payload.get(k) for k in ('target', 'domain', 'host', 'ip', 'url')
+                         if payload.get(k)), '')]
+    for target in targets:
+        if target:
+            try:
+                validate_public_target(target)
+            except TargetValidationError as exc:
+                abort(400, str(exc))
 
 PLATFORMS = [
     {'name':'GitHub',    'url':'https://github.com/{}',                   'cat':'dev',    'icon':'🐙'},
@@ -58,7 +134,7 @@ def check_username(username):
         url = p['url'].format(username)
         try:
             t0 = time.time()
-            r  = requests.get(url, headers=HEADERS, timeout=6, allow_redirects=True)
+            r  = requests.get(url, headers=HEADERS, timeout=6, allow_redirects=False)
             ms = round((time.time()-t0)*1000)
             if r.status_code == 200:
                 status = 'found';     found     += 1
@@ -91,11 +167,11 @@ def check_domain(raw):
         return info
     try:
         t0 = time.time()
-        r  = requests.get(f'https://{domain}', headers=HEADERS, timeout=8, allow_redirects=True)
+        r  = requests.get(f'https://{domain}', headers=HEADERS, timeout=8, allow_redirects=False)
         info.update({'https_status':r.status_code,'response_time':round((time.time()-t0)*1000),
                      'reachable':True,'ssl':True,'server':r.headers.get('Server','Unknown'),
                      'content_type':r.headers.get('Content-Type','Unknown').split(';')[0],
-                     'redirect':r.url if r.url!=f'https://{domain}' else None})
+                     'redirect':r.headers.get('Location') if r.is_redirect else None})
     except requests.exceptions.SSLError:
         info['https_status'] = 'SSL Error'
     except:
@@ -258,7 +334,7 @@ def check_headers(url):
     if not url.startswith('http'):
         url = 'https://' + url
     try:
-        r = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=True)
+        r = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=False)
         found, missing = {}, []
         for h, meta in SEC_HEADERS.items():
             if h in r.headers:
@@ -274,7 +350,7 @@ def check_headers(url):
             'score':score,'grade':grade,'server':server,'powered':powered,'error':None
         }
     except Exception as e:
-        return {'url':url,'error':str(e),'found':{},'missing':[],'score':0,'grade':'F'}
+        return {'url':url,'error':str(e),'found':{},'missing':[],'score':None,'grade':'N/A'}
 # ── Universal Target Analyzer ─────────────────────────────
 def universal_analyze(target):
     import concurrent.futures, re
@@ -285,7 +361,8 @@ def universal_analyze(target):
 
     result = {'target':original,'clean':clean,'is_ip':is_ip,
               'ip_info':None,'dns':None,'ports':None,
-              'whois':None,'headers':None,'domain_info':None}
+              'whois':None,'headers':None,'domain_info':None,
+              'ssl':None,'tech':None}
 
     def _ip():
         ip = clean if is_ip else None
@@ -301,6 +378,8 @@ def universal_analyze(target):
         'whois':       lambda: get_whois(clean)     if not is_ip else None,
         'headers':     lambda: check_headers(url_t),
         'domain_info': lambda: check_domain(clean)  if not is_ip else None,
+        'ssl':         lambda: ssl_inspect(clean) if not is_ip else None,
+        'tech':        lambda: tech_fingerprint(url_t) if not is_ip else None,
     }
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as ex:
@@ -308,6 +387,7 @@ def universal_analyze(target):
         for k, f in futures.items():
             try:    result[k] = f.result(timeout=12)
             except: result[k] = None
+    result['evidence'] = build_evidence_ledger(result)
     return result
 
 # ── Hash Tools ────────────────────────────────────────────
@@ -337,9 +417,10 @@ def analyze_url(url):
     params = parse_qs(p.query)
     final = url; status = None; redirected = False
     try:
-        r = requests.get(url, headers=HEADERS, timeout=6, allow_redirects=True)
-        final = r.url; status = r.status_code
-        redirected = final.rstrip('/') != url.rstrip('/')
+        r = requests.get(url, headers=HEADERS, timeout=6, allow_redirects=False)
+        final = r.headers.get('Location', url) if r.is_redirect else r.url
+        status = r.status_code
+        redirected = bool(r.is_redirect)
     except: pass
     suspicious = any(kw in url.lower() for kw in ['eval(','base64','<script','javascript:','onload=','onerror='])
     return {
@@ -387,7 +468,7 @@ def ssl_inspect(domain):
             'error':     None
         }
     except ssl_lib.SSLCertVerificationError as e:
-        return {'domain':domain,'error':f'Cert verification failed: {e}','expired':True}
+        return {'domain':domain,'error':f'Cert verification failed: {e}','expired':False,'verification_error':True}
     except Exception as e:
         return {'domain':domain,'error':str(e),'expired':False}
 
@@ -426,7 +507,7 @@ def tech_fingerprint(url):
         'Analytics': [], 'Database': [],
     }
     try:
-        r    = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=True)
+        r    = requests.get(url, headers=HEADERS, timeout=8, allow_redirects=False)
         h    = r.headers
         html = r.text[:8000]
         hl   = html.lower()
@@ -517,7 +598,7 @@ def calculate_threat_score(result):
             score += 20
             flags.append({'msg':f"Exposed service: {risky[p['port']]} (:{p['port']})","sev":'high'})
 
-    hs = heads.get('score')
+    hs = heads.get('score') if not heads.get('error') else None
     if hs is not None:
         if hs < 40:
             score += 20
@@ -526,7 +607,10 @@ def calculate_threat_score(result):
             score += 10
             flags.append({'msg':f'Poor security headers: {hs}%','sev':'medium'})
 
-    if ssl_r.get('expired'):
+    if ssl_r.get('verification_error'):
+        score += 20
+        flags.append({'msg':'TLS certificate verification failed','sev':'high'})
+    elif ssl_r.get('expired'):
         score += 20
         flags.append({'msg':'SSL certificate is expired','sev':'high'})
     elif ssl_r.get('soon'):
@@ -539,26 +623,43 @@ def calculate_threat_score(result):
         flags.append({'msg':f'Server version exposed: {sv}','sev':'low'})
 
     score = min(score, 100)
+    observed = []
+    if ip.get('status') == 'success': observed.append('ip_geolocation')
+    if ports and not ports.get('error'): observed.append('tcp_ports')
+    if heads and not heads.get('error'): observed.append('http_headers')
+    if ssl_r and not ssl_r.get('error'): observed.append('tls_certificate')
+
     if score >= 70:   lvl,clr = 'Critical','red'
     elif score >= 50: lvl,clr = 'High Risk','red'
     elif score >= 30: lvl,clr = 'Medium Risk','amber'
-    elif score >= 10: lvl,clr = 'Low Risk','green'
-    else:             lvl,clr = 'Clean','green'
+    elif score >= 10: lvl,clr = 'Low Risk','amber'
+    elif not observed: lvl,clr = 'Insufficient Data','amber'
+    else:             lvl,clr = 'No Indicators Observed','green'
 
-    return {'score':score,'level':lvl,'color':clr,'flags':flags}
+    return {'score':score,'level':lvl,'color':clr,'flags':flags,
+            'sources_observed': observed, 'evidence_count': len(observed),
+            'method': 'Exploratory indicators, not a probability of compromise'}
 
 # ── Auth routes ───────────────────────────────────────────
 @app.route('/login', methods=['GET','POST'])
 def login():
     error = None
     if request.method == 'POST':
-        if request.form.get('password') == PASSWORD:
+        peer = request.remote_addr or 'unknown'
+        if not login_throttle.allowed(peer):
+            return render_template('login.html', error='Too many attempts; try again later'), 429
+        if PASSWORD and hmac.compare_digest(request.form.get('password', ''), PASSWORD):
+            login_throttle.reset(peer)
+            session.clear()
             session['logged_in'] = True
+            session.permanent = True
             return redirect(url_for('dashboard'))
+        login_throttle.register_failure(peer)
         error = 'Wrong password'
     return render_template('login.html', error=error)
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
+@login_required
 def logout():
     session.clear()
     return redirect(url_for('login'))
@@ -724,71 +825,6 @@ def export_pdf(report_id):
     resp.headers['Content-Disposition'] = f'attachment; filename=CID_Report_{report_id}_{r["target"]}.pdf'
     return resp
 
-    buf  = io.BytesIO()
-    doc  = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm,
-                             leftMargin=2*cm, rightMargin=2*cm)
-    styles = getSampleStyleSheet()
-    story  = []
-    ts = ParagraphStyle('t', parent=styles['Title'], fontSize=20, textColor=colors.HexColor('#00c8ff'))
-    story.append(Paragraph(f"CID Report #{r['id']} — {r['target']}", ts))
-    story.append(Spacer(1, 0.4*cm))
-    ms = ParagraphStyle('m', parent=styles['Normal'], fontSize=10, textColor=colors.HexColor('#4a6080'))
-    story.append(Paragraph(f"Type: {r['type'].title()}  |  {r['timestamp']}", ms))
-    story.append(Spacer(1, 0.8*cm))
-    if r['type'] == 'username':
-        s = r['summary']
-        td = [['Platforms','Found','Not Found','Errors'],
-              [str(s.get('total',0)),str(s.get('found',0)),str(s.get('not_found',0)),str(s.get('errors',0))]]
-        t2 = Table(td, colWidths=[4*cm]*4)
-        t2.setStyle(TableStyle([
-            ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#0c1829')),
-            ('TEXTCOLOR',(0,0),(-1,0),colors.HexColor('#00c8ff')),
-            ('FONTSIZE',(0,0),(-1,-1),10),('ALIGN',(0,0),(-1,-1),'CENTER'),
-            ('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#1a3050')),
-            ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white,colors.HexColor('#f0f4f8')]),
-        ]))
-        story.append(t2)
-        story.append(Spacer(1,0.8*cm))
-        found = [x for x in r['results'] if x.get('status')=='found']
-        if found:
-            story.append(Paragraph("Found Profiles", styles['Heading2']))
-            story.append(Spacer(1,0.3*cm))
-            rows = [['Platform','URL','ms']]
-            for p in found:
-                rows.append([p.get('platform',''),p.get('url',''),str(p.get('ms','—'))])
-            t3 = Table(rows, colWidths=[3*cm,11*cm,2*cm])
-            t3.setStyle(TableStyle([
-                ('BACKGROUND',(0,0),(-1,0),colors.HexColor('#10b981')),
-                ('TEXTCOLOR',(0,0),(-1,0),colors.white),
-                ('FONTSIZE',(0,0),(-1,-1),8),
-                ('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#c8d8e8')),
-                ('ROWBACKGROUNDS',(0,1),(-1,-1),[colors.white,colors.HexColor('#f0f4f8')]),
-            ]))
-            story.append(t3)
-    else:
-        d = r['results'] if isinstance(r['results'], dict) else {}
-        rows = [[k, str(v)] for k,v in d.items() if k != 'error' and v]
-        if rows:
-            t4 = Table(rows, colWidths=[5*cm,11*cm])
-            t4.setStyle(TableStyle([
-                ('FONTSIZE',(0,0),(-1,-1),10),
-                ('TEXTCOLOR',(0,0),(0,-1),colors.HexColor('#4a6080')),
-                ('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),
-                ('GRID',(0,0),(-1,-1),0.5,colors.HexColor('#c8d8e8')),
-                ('ROWBACKGROUNDS',(0,0),(-1,-1),[colors.white,colors.HexColor('#f0f4f8')]),
-            ]))
-            story.append(t4)
-    story.append(Spacer(1,1.5*cm))
-    fs = ParagraphStyle('f', parent=styles['Normal'], fontSize=8,
-                        textColor=colors.HexColor('#4a6080'), alignment=1)
-    story.append(Paragraph("Generated by Cyber Intelligence Dashboard · Educational Use Only", fs))
-    doc.build(story)
-    buf.seek(0)
-    resp = make_response(buf.read())
-    resp.headers['Content-Type']        = 'application/pdf'
-    resp.headers['Content-Disposition'] = f'attachment; filename=report_{report_id}.pdf'
-    return resp
-
 @app.route('/reports/clear', methods=['POST'])
 @login_required
 def clear_reports_route():
@@ -812,8 +848,14 @@ def analyze():
         searched = request.form.get('target','').strip()
         if searched:
             result = universal_analyze(searched)
-            save_report('analyze', searched, result)
-    return render_template('analyze.html', result=result, searched=searched, active='analyze')
+            assessment = calculate_threat_score(result)
+            save_report('analyze', searched, result, assessment)
+        else:
+            assessment = None
+    else:
+        assessment = None
+    return render_template('analyze.html', result=result, threat=assessment,
+                           searched=searched, active='analyze')
 
 @app.route('/hash-tools', methods=['GET','POST'])
 @login_required
@@ -880,13 +922,13 @@ def tech_detect():
 from flask import jsonify
 from functools import wraps
 
-API_KEY = 'cid-api-2025-ms'   # غيّره بمفتاحك
+API_KEY = os.environ.get('CID_API_KEY')
 
 def api_key_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        key = request.headers.get('X-API-Key') or request.args.get('api_key')
-        if key != API_KEY:
+        key = request.headers.get('X-API-Key', '')
+        if not API_KEY or not hmac.compare_digest(key, API_KEY):
             return jsonify({'success':False,'error':'Invalid or missing API key'}), 401
         return f(*args, **kwargs)
     return decorated
@@ -920,7 +962,7 @@ def api_index():
             'GET  /api/v1/reports/:id':'Get single report',
             'GET  /api/v1/stats':      'Platform statistics',
         },
-        'auth': 'Header: X-API-Key or ?api_key=',
+        'auth': 'Header: X-API-Key',
         'note': 'Educational use only'
     })
 
@@ -1069,17 +1111,7 @@ def api_analyze():
         return api_response(error='target field required', status=400)
     result = universal_analyze(target)
     threat = calculate_threat_score(result)
-    if not result.get('is_ip'):
-        import concurrent.futures
-        clean = result.get('clean','')
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
-            f_ssl  = ex.submit(ssl_inspect, clean)
-            f_tech = ex.submit(tech_fingerprint, f'https://{clean}')
-            try:    result['ssl']  = f_ssl.result(timeout=10)
-            except: result['ssl']  = None
-            try:    result['tech'] = f_tech.result(timeout=10)
-            except: result['tech'] = None
-    save_report('analyze', target, result)
+    save_report('analyze', target, result, threat)
     return api_response({
         'target':  target,
         'result':  result,
@@ -1206,7 +1238,7 @@ def api_threat():
 @app.route('/api-docs')
 @login_required
 def api_docs():
-    return render_template('api-docs.html', api_key=API_KEY, active='api_docs')
+    return render_template('api-docs.html', active='api_docs')
 
 
 # ── Scheduled Scans ───────────────────────────
@@ -1214,8 +1246,10 @@ def api_docs():
 @login_required
 def scheduler_page():
     schedules = get_all_schedules()
+    from scheduler import scheduler
     return render_template('scheduler.html',
-                           schedules=schedules, active='scheduler')
+                           schedules=schedules, scheduler_running=scheduler.running,
+                           active='scheduler')
 
 @app.route('/scheduler/add', methods=['POST'])
 @login_required
@@ -1224,6 +1258,13 @@ def scheduler_add():
     target    = request.form.get('target','').strip()
     scan_type = request.form.get('scan_type','domain')
     frequency = request.form.get('frequency','daily')
+    from scheduler import scheduler
+    if not scheduler.running:
+        abort(503, 'Scheduled jobs are disabled in this process')
+    if scan_type not in ('username', 'domain', 'ip', 'dns', 'ports', 'headers', 'ssl', 'analyze'):
+        abort(400, 'Unsupported scan type')
+    if frequency not in ('every_5m', 'hourly', 'daily', 'weekly'):
+        abort(400, 'Unsupported schedule frequency')
     if name and target:
         sid = create_schedule(name, target, scan_type, frequency)
         add_job(sid, target, scan_type, frequency)
@@ -1240,6 +1281,11 @@ def scheduler_delete(sid):
 @login_required
 def scheduler_toggle(sid):
     s      = get_schedule(sid)
+    if not s:
+        abort(404)
+    from scheduler import scheduler
+    if not scheduler.running:
+        abort(503, 'Scheduler is disabled')
     active = not bool(s.get('active', 1))
     toggle_schedule_db(sid, active)
     if active:
@@ -1255,6 +1301,9 @@ def scheduler_run_now(sid):
     from scheduler import run_scheduled_scan
     s = get_schedule(sid)
     if s:
+        from scheduler import scheduler
+        if not scheduler.running:
+            abort(503, 'Scheduler is disabled')
         import threading
         t = threading.Thread(
             target=run_scheduled_scan,
@@ -1291,9 +1340,10 @@ def api_phone():
     return api_response(result)
 
 if __name__ == '__main__':
+    start_scheduler()
     print('\n\033[36m  ╔══════════════════════════════════╗')
     print('  ║  CYBER INTELLIGENCE DASHBOARD   ║')
-    print('  ║  Mohammed Drhoobe  ·  v3.0.0       ║')
+    print(f'  ║  Mohammed Drhoobe  ·  v{APP_VERSION}       ║')
     print('  ╚══════════════════════════════════╝\033[0m')
     print('\033[32m  ✓  http://127.0.0.1:5000\033[0m\n')
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=False, host=os.environ.get('CID_HOST', '127.0.0.1'), port=int(os.environ.get('CID_PORT', '5000')))

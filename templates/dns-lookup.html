@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom:24px;">
   <div class="card-label"><i class="fas fa-sitemap" style="color:var(--cyan);"></i> &nbsp;Target Domain</div>
   <form method="POST" data-loading="QUERYING DNS...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="domain"
              placeholder="e.g. example.com"

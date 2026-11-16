@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom:24px;">
   <div class="card-label"><i class="fas fa-search" style="color:var(--cyan);"></i> &nbsp;Target Username</div>
   <form method="POST" data-loading="SCANNING PLATFORMS...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="username"
              placeholder="e.g. john_doe" value="{{ searched or '' }}"

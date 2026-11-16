@@ -5,7 +5,7 @@
 <div class="page-hdr">
   <div class="page-eye">◈ Project Info</div>
   <h1 class="page-title">About CID</h1>
-  <p class="page-sub">Cyber Intelligence Dashboard v5.0 — 12 OSINT tools in one platform.</p>
+  <p class="page-sub">Cyber Intelligence Dashboard v{{ app_version }} — an educational reconnaissance prototype.</p>
 </div>
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -23,12 +23,12 @@
       <span class="badge badge-found">Open Source</span>
       <span class="badge badge-username">Educational</span>
       <span class="badge badge-domain">Research</span>
-      <span class="badge badge-unknown">v5.0</span>
+      <span class="badge badge-unknown">v{{ app_version }}</span>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-label"><i class="fas fa-tools" style="color:var(--green);"></i> &nbsp;All Modules (12)</div>
+    <div class="card-label"><i class="fas fa-tools" style="color:var(--green);"></i> &nbsp;Core Modules</div>
     {% for icon,color,name,desc in [
       ('fas fa-crosshairs','cyan','Target Analyzer','IP·DNS·Ports·WHOIS·Headers all-in-one'),
       ('fas fa-user-secret','cyan','Username Scan','Checks 16 platforms simultaneously'),
@@ -73,13 +73,9 @@
   <div class="card">
     <div class="card-label"><i class="fas fa-road" style="color:var(--amber);"></i> &nbsp;Roadmap</div>
     {% for ver,status,desc in [
-      ('v1.0','✅ Done','Dashboard · Username · Domain · Reports'),
-      ('v2.0','✅ Done','SQLite · Statistics · Search & Filter'),
-      ('v3.0','✅ Done','Bulk Scan · IP · Email · WHOIS'),
-      ('v4.0','✅ Done','DNS · Port Scanner · Security Headers'),
-      ('v5.0','✅ Done','Target Analyzer · Hash Tools · URL Analyzer'),
-      ('v6.0','🔜 Next','Authentication hardening · API endpoints'),
-      ('v7.0','📋 Planned','Shodan-like index · Threat scoring · Timeline'),
+      ('Current','Implemented','Reconnaissance tools · Local reports · REST API'),
+      ('Review','In progress','Offline tests · Input validation · Source limitations'),
+      ('Next','Planned','Provider fixtures · Precision/recall study · Improved rate limits'),
     ] %}
     <div class="roadmap-item">
       <span class="roadmap-ver">{{ ver }}</span>
@@ -99,7 +95,7 @@
         <div class="author-name">Mohammed Drhoobe</div>
         <div class="author-role">Cybersecurity & OSINT Learner</div>
         <div style="margin-top:10px;">
-          <a href="https://github.com" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
+          <a href="https://github.com/mdrhoobe/cyber-intelligence-dashboard" target="_blank" rel="noopener" class="btn btn-outline btn-sm">
             <i class="fab fa-github"></i> GitHub
           </a>
         </div>

@@ -102,6 +102,9 @@ def run_scheduled_scan(schedule_id, target, scan_type):
     print(f'[{datetime.now().strftime("%H:%M:%S")}] Scheduled scan: {scan_type} → {target}')
 
     try:
+        if scan_type != 'username':
+            from target_validation import validate_public_target
+            validate_public_target(target)
         if scan_type == 'username':
             results, summary = check_username(target)
             save_report('username', target, results, summary)

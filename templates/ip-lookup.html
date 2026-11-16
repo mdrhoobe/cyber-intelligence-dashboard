@@ -11,6 +11,7 @@
 <div class="card" style="margin-bottom:24px;">
   <div class="card-label"><i class="fas fa-map-marker-alt" style="color:var(--cyan);"></i> &nbsp;Target IP</div>
   <form method="POST" data-loading="LOOKING UP IP...">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="input-group">
       <input class="form-input" type="text" name="ip"
              placeholder="e.g. 8.8.8.8 or 2606:4700:4700::1111"

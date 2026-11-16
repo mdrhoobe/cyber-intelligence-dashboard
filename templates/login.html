@@ -87,6 +87,7 @@
     {% endif %}
 
     <form method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div style="margin-bottom:20px;">
         <label class="field-label">Access Password</label>
         <div class="field-wrap">

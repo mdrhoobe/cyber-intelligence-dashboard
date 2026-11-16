@@ -68,8 +68,8 @@
 {% block extra_js %}
 {% if nodes and nodes != '[]' %}
 <script>
-var NODES = {{ nodes | safe }};
-var EDGES = {{ edges | safe }};
+var NODES = JSON.parse({{ nodes | tojson }});
+var EDGES = JSON.parse({{ edges | tojson }});
 
 var container = document.getElementById('network-map');
 
@@ -142,16 +142,16 @@ network.on('click', function(params) {
       panel.style.display = 'block';
       content.innerHTML =
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">' +
-        '<div><span style="color:var(--text-dim)">Target: </span>' + node.id + '</div>' +
-        '<div><span style="color:var(--text-dim)">Type: </span>' + node.type + '</div>' +
-        '</div>' +
+        '<div>Target: <span id="node-target"></span></div>' +
+        '<div>Type: <span id="node-type"></span></div></div>' +
         '<div style="margin-top:10px;">' +
-        '<a href="/analyze" style="color:var(--green);margin-right:12px;" ' +
-        'onclick="sessionStorage.setItem(\'at\',\'' + node.id + '\')">' +
-        '<i class="fas fa-crosshairs"></i> Analyze</a>' +
-        '<a href="/threat" style="color:var(--red);">' +
-        '<i class="fas fa-shield-alt"></i> Threat Check</a>' +
-        '</div>';
+        '<a href="/analyze" id="node-analyze">Analyze</a> ' +
+        '<a href="/threat">Threat Check</a></div>';
+      content.querySelector('#node-target').textContent = node.id;
+      content.querySelector('#node-type').textContent = node.type;
+      content.querySelector('#node-analyze').addEventListener('click', function() {
+        sessionStorage.setItem('at', node.id);
+      });
     }
   } else {
     document.getElementById('node-info').style.display = 'none';
