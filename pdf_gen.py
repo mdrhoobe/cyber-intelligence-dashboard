@@ -408,7 +408,7 @@ def build_phone_report(story, styles, res):
 
     # AI Summary
     if ai.get('summary'):
-        section_title(story, styles, 'AI Analysis', '◈')
+        section_title(story, styles, 'Evidence Summary' if ai.get('method') == 'rules' else 'Assisted Evidence Summary', '◈')
         story.append(Paragraph(escape(str(ai['summary'])), styles['body']))
         story.append(Spacer(1, 0.3*cm))
         if ai.get('observations'):

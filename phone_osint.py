@@ -288,65 +288,64 @@ def extract_names(hits):
 # 8. AI CORRELATION (Claude API)
 # ════════════════════════════════════════════════
 def ai_correlate(phone_data):
+    """Return a deterministic summary; opt-in external text is never used as evidence."""
+    base = manual_confidence(phone_data)
+    if os.environ.get('CID_ALLOW_EXTERNAL_AI') != '1':
+        return base
     key = os.environ.get('ANTHROPIC_API_KEY', '')
-    if not key:
-        return manual_confidence(phone_data)
+    model = os.environ.get('ANTHROPIC_MODEL', '')
+    if not key or not model:
+        return base
+
+    info = phone_data.get('info', {})
+    aggregate = {
+        'valid_number_format': bool(info.get('valid')),
+        'has_carrier_metadata': bool(info.get('carrier') and info.get('carrier') != 'Unknown'),
+        'web_reference_count': len(phone_data.get('web_hits', [])),
+        'candidate_name_count': len(phone_data.get('names', [])),
+        'candidate_email_count': len(phone_data.get('emails', [])),
+        'breach_source_count': sum(
+            1 for item in phone_data.get('hibp_results', [])
+            if item.get('breached') is not None
+        ),
+        'reputation_reference_count': len(phone_data.get('threat_data', [])),
+    }
+    prompt = (
+        'Summarize completeness of a public-source investigation in neutral language. '
+        'Do not infer any person identity, location, wrongdoing, risk, or confidence probability. '
+        'Return JSON with keys summary (string), observations (string list), '
+        'next_steps (string list). Only describe these counts: '
+        + json.dumps(aggregate)
+    )
     try:
-        summary = {
-            'number':     phone_data['info'].get('formatted'),
-            'country':    phone_data['info'].get('country_name'),
-            'carrier':    phone_data['info'].get('carrier'),
-            'line_type':  phone_data['info'].get('line_type'),
-            'names_found':phone_data.get('names', []),
-            'emails_found':phone_data.get('emails', []),
-            'web_hits':   len(phone_data.get('web_hits', [])),
-            'breaches':   [b for e in phone_data.get('hibp_results', [])
-                           for b in e.get('breaches', [])],
-            'threat_hits': any(t.get('malicious') for t in phone_data.get('threat_data', [])),
-        }
-
-        prompt = f"""You are a professional OSINT analyst. Analyze this phone number investigation data and provide:
-
-1. A brief summary (2-3 sentences) of what was found
-2. Key observations about the number's owner (if data exists)
-3. Risk assessment: Low / Medium / High
-4. Recommended next steps for investigation
-5. Confidence score (0-100) based on data quality
-
-Data collected:
-{json.dumps(summary, indent=2)}
-
-Respond in this exact JSON format only:
-{{
-  "summary": "brief summary here",
-  "observations": ["observation 1", "observation 2"],
-  "risk": "Low|Medium|High",
-  "next_steps": ["step 1", "step 2"],
-  "confidence": 0-100,
-  "confidence_reason": "why this score"
-}}"""
-
-        r = requests.post(
+        response = requests.post(
             'https://api.anthropic.com/v1/messages',
-            headers={'Content-Type': 'application/json',
-                     'x-api-key': key, 'anthropic-version': '2023-06-01'},
-            json={
-                'model':      os.environ.get('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
-                'max_tokens': 1000,
-                'messages':   [{'role': 'user', 'content': prompt}],
+            headers={
+                'Content-Type': 'application/json', 'x-api-key': key,
+                'anthropic-version': '2023-06-01',
             },
-            timeout=30
+            json={
+                'model': model, 'max_tokens': 350,
+                'messages': [{'role': 'user', 'content': prompt}],
+            },
+            timeout=15,
         )
-        if r.status_code == 200:
-            content = r.json()['content'][0]['text']
-            # Clean JSON
-            clean = re.sub(r'```json|```', '', content).strip()
-            return json.loads(clean)
-    except Exception as e:
+        if response.status_code == 200:
+            data = response.json()
+            content = data['content'][0]['text']
+            parsed = json.loads(content)
+            if isinstance(parsed.get('summary'), str) and isinstance(parsed.get('observations'), list):
+                return {
+                    **base,
+                    'summary': parsed['summary'][:1200],
+                    'observations': [str(s)[:300] for s in parsed['observations'][:6]],
+                    'next_steps': [str(s)[:300] for s in parsed.get('next_steps', [])[:5]],
+                    'method': 'assisted_summary',
+                }
+    except (requests.RequestException, KeyError, IndexError, TypeError, ValueError):
         pass
+    return base
 
-    # Fallback — calculate score manually
-    return manual_confidence(phone_data)
 
 def manual_confidence(data):
     score = 0
@@ -367,42 +366,40 @@ def manual_confidence(data):
     risk = 'Unassessed'
 
     return {
-        'summary':           f"Phone number from {info.get('country_name','unknown')} "
-                             f"({info.get('carrier','unknown carrier')}). "
-                             f"{len(data.get('names',[]))} names and "
-                             f"{len(data.get('web_hits',[]))} web references found.",
+        'summary':           f"Numbering metadata suggests {info.get('country_name','unknown region')}; "
+                             f"{len(data.get('web_hits',[]))} public search references were found. "
+                             "References may be unrelated. Ownership and location are not verified.",
         'observations':      obs,
         'risk':              risk,
         'next_steps':        [
-            'Search found names on social media',
-            'Check extracted emails in breach databases',
-            'Run username scan on discovered names',
-            'Cross-reference with Threat Intelligence module',
+            'Check source provenance before drawing conclusions',
+            'Record unavailable providers and ambiguous matches',
+            'Use personal identifiers only with an appropriate legal basis',
         ],
         'confidence':        min(score, 95),
-        'confidence_reason': f'Based on {len(obs)} data points collected',
+        'confidence_reason': f'Demonstration coverage index based on {len(obs)} checks',
+        'method': 'rules',
     }
 
 # ════════════════════════════════════════════════
 # 9. CONFIDENCE SCORE
 # ════════════════════════════════════════════════
 def calculate_confidence(data, ai_result):
-    """Final confidence based on data + AI"""
-    base    = ai_result.get('confidence', 0)
-    sources = 0
-    if data.get('web_hits'):     sources += 1
-    if data.get('names'):        sources += 1
-    if data.get('emails'):       sources += 1
-    if data.get('hibp_results'): sources += 1
-    if data.get('threat_data'):  sources += 1
+    """Heuristic evidence-coverage index, not a probability of correctness."""
+    base = manual_confidence(data)['confidence']
+    sources = int(bool(data.get('web_hits')))
+    sources += int(any(
+        item.get('breached') is not None for item in data.get('hibp_results', [])
+    ))
+    sources += int(bool(data.get('threat_data')))
+    final = min(int(base + sources * 2), 95)
+    if final >= 80:   level, color = 'High coverage', 'green'
+    elif final >= 55: level, color = 'Moderate coverage', 'amber'
+    elif final >= 30: level, color = 'Limited coverage', 'amber'
+    else:             level, color = 'Insufficient data', 'red'
+    return {'score': final, 'level': level, 'color': color, 'sources': sources,
+            'method': 'rule_based_coverage_index'}
 
-    final = min(int(base + (sources * 2)), 98)
-    if final >= 80:   level, color = 'High Confidence',   'green'
-    elif final >= 55: level, color = 'Medium Confidence', 'amber'
-    elif final >= 30: level, color = 'Low Confidence',    'red'
-    else:             level, color = 'Insufficient Data', 'red'
-
-    return {'score': final, 'level': level, 'color': color, 'sources': sources}
 
 # ════════════════════════════════════════════════
 # MAIN PIPELINE

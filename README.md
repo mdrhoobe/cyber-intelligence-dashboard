@@ -38,7 +38,7 @@ Open http://127.0.0.1:5000. The dashboard listens on localhost by default; runni
 
 API requests use the `X-API-Key` header. Keys in URL query parameters are not supported.
 
-For providers requiring credentials, supported optional environment variables include `ABUSEIPDB_KEY`, `VIRUSTOTAL_KEY`, `OTX_KEY`, `HIBP_API_KEY` and `ANTHROPIC_API_KEY`. Phone summaries use deterministic heuristics if the optional language-model API is not configured. Such summaries are **not independently verified**.
+For providers requiring credentials, supported optional environment variables include `ABUSEIPDB_KEY`, `VIRUSTOTAL_KEY`, `OTX_KEY`, `HIBP_API_KEY` and `ANTHROPIC_API_KEY`. Phone summaries use deterministic heuristics by default. To opt in to external text assistance, explicitly set CID_ALLOW_EXTERNAL_AI=1 plus ANTHROPIC_API_KEY and ANTHROPIC_MODEL. Only aggregate counts are sent; phone numbers, names and email addresses are not included. External text does not control risk or evidence-coverage scores. Such summaries are **not independently verified**.
 
 ## Run tests
 
@@ -84,3 +84,5 @@ tests/                 Offline regression checks
 ```
 
 Built and maintained as a cybersecurity learning and portfolio project by Mohammed Salih.
+
+For evaluation design, assumptions, and provider-failure interpretation, see [METHODOLOGY.md](METHODOLOGY.md).
