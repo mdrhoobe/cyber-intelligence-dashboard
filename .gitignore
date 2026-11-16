@@ -35,3 +35,11 @@ desktop.ini
 
 # Logs
 *.log
+
+# Report databases, backups, credentials
+reports/*.db
+reports/*.db-*
+reports/*.sqlite*
+reports/*.bak
+.env.*
+!.env.example

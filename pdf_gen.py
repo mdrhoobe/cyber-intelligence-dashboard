@@ -516,7 +516,7 @@ def generate_pdf(report):
                 story.append(Paragraph(rtype_dns, styles['label']))
                 story.append(Paragraph('\n'.join(vals), styles['mono']))
                 story.append(Spacer(1,0.2*cm))
-elif rtype == 'phone':
+    elif rtype == 'phone':
         build_phone_report(story, styles, results)
 
     else:
