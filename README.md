@@ -96,3 +96,7 @@ Candidate version: **0.9.0** (research prototype). The internal REST API keeps i
 The single-user login is throttled in memory to five failed attempts per client IP in five minutes. The limit resets on server restart and is not suitable for multi-worker internet deployments. Log out with the dashboard button (a protected POST form). Sessions expire after eight hours.
 
 The scheduled scan worker starts only when the application is launched using `python app.py`. Importing `app` for unit tests or a WSGI worker will not start background scanning. Run only one local scheduler process; distributed deployment requires a dedicated worker and additional safeguards.
+
+## Evidence ledger
+
+Each all-in-one target analysis now stores an `evidence` ledger with source labels, a UTC collection timestamp, and one of `observed`, `no_data`, `unavailable` or `not_applicable`. These labels describe **source availability only**; they do not verify the truth of a returned finding. The same ledger is returned by the analysis API and displayed in the browser.

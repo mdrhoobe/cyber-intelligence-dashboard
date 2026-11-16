@@ -4,6 +4,7 @@ import requests, socket, time, json, io, re, os, hmac, secrets
 from target_validation import validate_public_target, TargetValidationError
 from version import APP_VERSION
 from auth_controls import LoginThrottle
+from evidence_ledger import build_evidence_ledger
 from datetime import timedelta
 from db import (init_db, save_report, get_all_reports,
                 get_recent_reports, count_reports,
@@ -386,6 +387,7 @@ def universal_analyze(target):
         for k, f in futures.items():
             try:    result[k] = f.result(timeout=12)
             except: result[k] = None
+    result['evidence'] = build_evidence_ledger(result)
     return result
 
 # ── Hash Tools ────────────────────────────────────────────

@@ -40,3 +40,7 @@ They check rejected private addresses, authentication, CSRF, PDF rendering, prov
 ## Next evaluation
 
 Use authorized test domains with known configurations. Keep timestamps and sanitized fixtures, label ground truth, compare agreement among providers, and report precision and recall separately from uptime and latency. Do not publish real private reports or identifying personal data.
+
+## Source availability in saved analyses
+
+All-in-one reports attach eight per-source statuses and one UTC collection timestamp. `observed` means an adapter returned usable data, not that the underlying claim was independently verified. `no_data` describes an available adapter without relevant data, `unavailable` records failures, and `not_applicable` denotes a module not used for this target category. These statuses must not be conflated with threat indicators.
