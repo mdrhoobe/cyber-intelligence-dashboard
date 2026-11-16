@@ -90,3 +90,9 @@ For evaluation design, assumptions, and provider-failure interpretation, see [ME
 ## Release status
 
 Candidate version: **0.9.0** (research prototype). The internal REST API keeps its own `v1` endpoint convention; it is not a claim that this prototype is production-ready. The current branch is undergoing review and should not be presented as a verified security assessment service.
+
+## Local authentication and scheduler
+
+The single-user login is throttled in memory to five failed attempts per client IP in five minutes. The limit resets on server restart and is not suitable for multi-worker internet deployments. Log out with the dashboard button (a protected POST form). Sessions expire after eight hours.
+
+The scheduled scan worker starts only when the application is launched using `python app.py`. Importing `app` for unit tests or a WSGI worker will not start background scanning. Run only one local scheduler process; distributed deployment requires a dedicated worker and additional safeguards.

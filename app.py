@@ -3,20 +3,24 @@ from functools import wraps
 import requests, socket, time, json, io, re, os, hmac, secrets
 from target_validation import validate_public_target, TargetValidationError
 from version import APP_VERSION
+from auth_controls import LoginThrottle
+from datetime import timedelta
 from db import (init_db, save_report, get_all_reports,
                 get_recent_reports, count_reports,
                 clear_reports, get_stats_data, search_reports)
 from threat import full_threat_report
 app = Flask(__name__)
 app.secret_key = os.environ.get('CID_SECRET_KEY') or secrets.token_hex(32)
-app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax', MAX_CONTENT_LENGTH=32768)
+app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
+                  PERMANENT_SESSION_LIFETIME=timedelta(hours=8),
+                  MAX_CONTENT_LENGTH=32768)
 init_db()
 from scheduler import (
     start_scheduler, get_all_schedules, get_schedule,
     create_schedule, add_job, remove_job,
     delete_schedule_db, toggle_schedule_db
 )
-start_scheduler()
+login_throttle = LoginThrottle(max_attempts=5, window_seconds=300)
 
 from phone_osint import phone_osint
 PASSWORD = os.environ.get('CID_PASSWORD')
@@ -28,6 +32,17 @@ def login_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated
+
+
+@app.after_request
+def set_security_headers(response):
+    response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+    response.headers.setdefault('X-Frame-Options', 'DENY')
+    response.headers.setdefault('Referrer-Policy', 'no-referrer')
+    response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+    if request.endpoint != 'static':
+        response.headers['Cache-Control'] = 'no-store'
+    return response
 
 
 @app.context_processor
@@ -628,13 +643,21 @@ def calculate_threat_score(result):
 def login():
     error = None
     if request.method == 'POST':
+        peer = request.remote_addr or 'unknown'
+        if not login_throttle.allowed(peer):
+            return render_template('login.html', error='Too many attempts; try again later'), 429
         if PASSWORD and hmac.compare_digest(request.form.get('password', ''), PASSWORD):
+            login_throttle.reset(peer)
+            session.clear()
             session['logged_in'] = True
+            session.permanent = True
             return redirect(url_for('dashboard'))
+        login_throttle.register_failure(peer)
         error = 'Wrong password'
     return render_template('login.html', error=error)
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
+@login_required
 def logout():
     session.clear()
     return redirect(url_for('login'))
@@ -1221,8 +1244,10 @@ def api_docs():
 @login_required
 def scheduler_page():
     schedules = get_all_schedules()
+    from scheduler import scheduler
     return render_template('scheduler.html',
-                           schedules=schedules, active='scheduler')
+                           schedules=schedules, scheduler_running=scheduler.running,
+                           active='scheduler')
 
 @app.route('/scheduler/add', methods=['POST'])
 @login_required
@@ -1231,6 +1256,13 @@ def scheduler_add():
     target    = request.form.get('target','').strip()
     scan_type = request.form.get('scan_type','domain')
     frequency = request.form.get('frequency','daily')
+    from scheduler import scheduler
+    if not scheduler.running:
+        abort(503, 'Scheduled jobs are disabled in this process')
+    if scan_type not in ('username', 'domain', 'ip', 'dns', 'ports', 'headers', 'ssl', 'analyze'):
+        abort(400, 'Unsupported scan type')
+    if frequency not in ('every_5m', 'hourly', 'daily', 'weekly'):
+        abort(400, 'Unsupported schedule frequency')
     if name and target:
         sid = create_schedule(name, target, scan_type, frequency)
         add_job(sid, target, scan_type, frequency)
@@ -1247,6 +1279,11 @@ def scheduler_delete(sid):
 @login_required
 def scheduler_toggle(sid):
     s      = get_schedule(sid)
+    if not s:
+        abort(404)
+    from scheduler import scheduler
+    if not scheduler.running:
+        abort(503, 'Scheduler is disabled')
     active = not bool(s.get('active', 1))
     toggle_schedule_db(sid, active)
     if active:
@@ -1262,6 +1299,9 @@ def scheduler_run_now(sid):
     from scheduler import run_scheduled_scan
     s = get_schedule(sid)
     if s:
+        from scheduler import scheduler
+        if not scheduler.running:
+            abort(503, 'Scheduler is disabled')
         import threading
         t = threading.Thread(
             target=run_scheduled_scan,
@@ -1298,6 +1338,7 @@ def api_phone():
     return api_response(result)
 
 if __name__ == '__main__':
+    start_scheduler()
     print('\n\033[36m  ╔══════════════════════════════════╗')
     print('  ║  CYBER INTELLIGENCE DASHBOARD   ║')
     print(f'  ║  Mohammed Drhoobe  ·  v{APP_VERSION}       ║')

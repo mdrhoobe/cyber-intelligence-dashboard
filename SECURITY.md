@@ -11,3 +11,7 @@ This repository is an educational prototype. It is not hardened for exposure to 
 5. Only scan systems with explicit permission. Never use production personal identifiers as sample data.
 
 The target validator blocks non-global addresses after DNS lookup, and redirects are not followed in core scan requests. It is a defense-in-depth measure, **not** a full protection against DNS rebinding or other network-layer attacks.
+
+## Additional controls
+
+A local login throttle limits repeated guesses per source address, protected forms use session tokens, and responses disable caching and framing. These controls do not replace reverse-proxy enforcement or platform-level protection for an externally accessible service. The scheduler is deliberately not started by importing the web application.

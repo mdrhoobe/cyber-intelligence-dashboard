@@ -6,6 +6,12 @@
   <div class="page-eye">◈ Automation Module</div>
   <h1 class="page-title">Scheduled Scans</h1>
   <p class="page-sub">Automate recurring scans — hourly, daily, or weekly.</p>
+{% if not scheduler_running %}
+<div class="card" role="status" style="margin-bottom:18px;border-color:var(--amber);">
+  Scheduled jobs are not running in this process. Launch the dashboard with
+  <code>python app.py</code> to enable the local scheduler.
+</div>
+{% endif %}
 </div>
 
 <!-- Add Schedule Form -->
